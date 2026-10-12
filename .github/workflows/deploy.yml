@@ -23,7 +23,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Установить clasp
         run: npm install -g @google/clasp@2.4.2
@@ -36,15 +36,19 @@ jobs:
           printf '%s' "$CLASPRC_JSON" > ~/.clasprc.json
 
       - name: Залить код в проект
-        run: clasp push --force
+        run: |
+          set -o pipefail
+          if ! clasp push --force 2>&1 | tee push.log; then
+            echo "::error title=clasp push::$(tr '\n' ' ' < push.log | cut -c1-900)"
+            exit 1
+          fi
 
       - name: Обновить веб-приложение (ссылка не меняется)
         run: |
           MSG="$(git log -1 --pretty=%s | cut -c1-90)"
-          if [ -z "$DEPLOYMENT_ID" ]; then
-            echo "Первое развёртывание: создаю веб-приложение"
-            clasp deploy --description "${GITHUB_SHA::7} ${MSG}"
-            clasp deployments
-          else
-            clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "${GITHUB_SHA::7} ${MSG}"
+          set -o pipefail
+          if ! clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "${GITHUB_SHA::7} ${MSG}" 2>&1 | tee deploy.log; then
+            echo "::error title=clasp deploy::$(tr '\n' ' ' < deploy.log | cut -c1-900)"
+            exit 1
           fi
+          echo "::notice title=Готово::$(tr '\n' ' ' < deploy.log | cut -c1-300)"

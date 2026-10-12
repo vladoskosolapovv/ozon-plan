@@ -17,7 +17,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      DEPLOYMENT_ID: ${{ vars.DEPLOYMENT_ID }}
+      DEPLOYMENT_ID: ''  # заполняется после первого развёртывания
     steps:
       - uses: actions/checkout@v4
 
@@ -40,6 +40,11 @@ jobs:
 
       - name: Обновить веб-приложение (ссылка не меняется)
         run: |
-          if [ -z "$DEPLOYMENT_ID" ]; then echo "Нет переменной DEPLOYMENT_ID"; exit 1; fi
           MSG="$(git log -1 --pretty=%s | cut -c1-90)"
-          clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "${GITHUB_SHA::7} ${MSG}"
+          if [ -z "$DEPLOYMENT_ID" ]; then
+            echo "Первое развёртывание: создаю веб-приложение"
+            clasp deploy --description "${GITHUB_SHA::7} ${MSG}"
+            clasp deployments
+          else
+            clasp deploy --deploymentId "$DEPLOYMENT_ID" --description "${GITHUB_SHA::7} ${MSG}"
+          fi

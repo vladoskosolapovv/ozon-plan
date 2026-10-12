@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>План продаж Ozon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Unbounded:wght@500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+/* Layout: sticky header with tabs, one working area per tab; tables scroll inside their own box. */
+:root{
+  --bg:#f3f4f7; --surface:#ffffff; --surface-2:#f7f8fb; --ink:#141821; --muted:#5d6676; --line:#e2e5ec;
+  --accent:#2c49d6; --accent-soft:#e6eafc;
+  --good:#17804f; --good-bg:#dcf2e6; --warn:#9a6410; --warn-bg:#fbeed3; --bad:#b93a24; --bad-bg:#fbe0d9;
+  --sa:#2c49d6; --sb:#c0562b; --sc:#16806e;
+  --f-display:"Unbounded","Arial Black",system-ui,sans-serif;
+  --f-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0f1218; --surface:#171b23; --surface-2:#1c212b; --ink:#e7eaf0; --muted:#97a0b0; --line:#2a303b;
+    --accent:#8197ff; --accent-soft:#232c52;
+    --good:#56c993; --good-bg:#16332a; --warn:#e2b25a; --warn-bg:#382c13; --bad:#f2846c; --bad-bg:#3d201a;
+    --sa:#8197ff; --sb:#f0905f; --sc:#4cc9b0;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--f-body);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+.num,td.n,th.n{font-variant-numeric:tabular-nums}
+.wrap{max-width:1440px;margin:0 auto;padding-inline:16px}
+
+header.top{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .row1{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;padding-block:12px}
+.brand{display:flex;align-items:baseline;gap:10px;margin-right:auto}
+.brand h1{font:600 18px/1.1 var(--f-display);letter-spacing:-.01em;margin:0}
+.brand .tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ctl{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
+select,input[type=text],input[type=number],input[type=month],input[type=search],textarea{
+  background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 9px;min-width:0}
+select:focus,input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 11px;cursor:pointer;color:var(--muted)}
+.seg button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+nav.tabs{display:flex;gap:2px;overflow-x:auto}
+nav.tabs button{border:0;background:none;padding:10px 14px;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;white-space:nowrap}
+nav.tabs button.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.status{font-size:12.5px;color:var(--muted);padding-block:10px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
+.status .pill{display:inline-flex;gap:6px;align-items:center}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.dot.ok{background:var(--good)} .dot.off{background:var(--warn)}
+
+main{padding-block:4px 48px}
+section[hidden]{display:none!important}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:7px;padding:7px 13px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-block:8px 14px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;cursor:pointer;font-size:13px;display:inline-flex;gap:6px;align-items:center}
+.chip.on{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.chip .nd{font-size:11px;color:var(--muted)}
+.chip.on .nd{color:inherit;opacity:.7}
+.spacer{flex:1}
+h2{font:600 15px/1.2 var(--f-display);margin:22px 0 10px;letter-spacing:-.005em}
+.hint{color:var(--muted);font-size:12.5px;max-width:78ch}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+
+/* KPI tiles */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:13px 15px;display:flex;flex-direction:column;gap:4px;min-width:0}
+.tile .lbl{font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.tile .big{font:600 23px/1.15 var(--f-display);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.tile .sub{font-size:12.5px;color:var(--muted)}
+.meter{height:6px;border-radius:3px;background:var(--surface-2);overflow:hidden;margin-top:4px;position:relative}
+.meter i{display:block;height:100%;background:var(--accent)}
+.meter i.good{background:var(--good)} .meter i.warn{background:var(--warn)} .meter i.bad{background:var(--bad)}
+
+.split{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+@media (max-width:820px){.split{grid-template-columns:1fr}}
+.mover{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 12px;align-items:center;font-size:13px}
+.mover .nm{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mover .nm small{color:var(--muted)}
+
+/* states */
+.st{display:inline-block;min-width:46px;text-align:center;padding:1px 7px;border-radius:5px;font-weight:600;font-size:12.5px}
+.st.good{background:var(--good-bg);color:var(--good)} .st.warn{background:var(--warn-bg);color:var(--warn)} .st.bad{background:var(--bad-bg);color:var(--bad)}
+.st.none{color:var(--muted);font-weight:400}
+.neg{color:var(--bad)} .pos{color:var(--good)}
+
+/* main table */
+.tbox{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:calc(100vh - 220px)}
+table.t{border-collapse:separate;border-spacing:0;width:100%;min-width:980px;font-size:13px}
+table.t th{position:sticky;top:0;background:var(--surface-2);z-index:2;font-weight:600;font-size:12px;color:var(--muted);text-align:right;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.t th:first-child,table.t td:first-child{text-align:left;position:sticky;left:0;z-index:1;background:inherit}
+table.t th:first-child{z-index:3;background:var(--surface-2)}
+table.t td{padding:6px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;background:var(--surface)}
+table.t tr.total td{background:var(--accent-soft);font-weight:600}
+table.t tr.cab td{background:var(--surface-2);font-weight:600}
+table.t tr.cat td{font-weight:600;cursor:pointer}
+table.t tr.cat td:first-child::before{content:"▸";display:inline-block;width:14px;color:var(--muted);transition:transform .12s}
+table.t tr.cat.open td:first-child::before{transform:rotate(90deg)}
+table.t tr.art td:first-child{padding-left:30px;font-weight:400;color:var(--ink)}
+table.t tr.out td{color:var(--muted);font-style:italic}
+table.t td .sm{display:block;font-size:11px;color:var(--muted);font-weight:400}
+.nm-cell{max-width:300px;overflow:hidden;text-overflow:ellipsis}
+
+/* simulator */
+.sim-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:900px){.sim-grid{grid-template-columns:1fr}}
+.sc{border-top:3px solid var(--c);}
+.sc .head{display:flex;gap:8px;align-items:center;margin-bottom:8px}
+.sc .head input{font-weight:600;flex:1;border-color:transparent;background:transparent;padding-left:0}
+.sc .head input:hover,.sc .head input:focus{border-color:var(--line);padding-left:9px}
+.fld{display:grid;grid-template-columns:1fr 110px;gap:4px 10px;align-items:center;margin-block:8px}
+.fld label{font-size:12.5px;color:var(--muted)}
+.fld input[type=range]{grid-column:1/3;width:100%;accent-color:var(--c)}
+.fld input[type=number]{text-align:right}
+.base{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 18px;margin-top:10px}
+.base div{display:flex;flex-direction:column}
+.base b{font-variant-numeric:tabular-nums;font-size:15px}
+.base span{font-size:11.5px;color:var(--muted)}
+table.cmp{border-collapse:collapse;width:100%;font-size:13px}
+table.cmp th,table.cmp td{padding:7px 10px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+table.cmp th:first-child,table.cmp td:first-child{text-align:left;color:var(--muted)}
+table.cmp th{font-size:12.5px}
+table.cmp td.best{background:var(--good-bg);color:var(--good);font-weight:700}
+.verdict{font-size:14px;line-height:1.55;margin:12px 0 0;max-width:90ch}
+.chartbox{overflow-x:auto}
+svg text{fill:var(--muted);font:11px var(--f-body)}
+svg .lbl-strong{fill:var(--ink);font-weight:600}
+table.mx{border-collapse:separate;border-spacing:3px;font-size:12.5px}
+table.mx td,table.mx th{padding:6px 9px;text-align:right;border-radius:5px;white-space:nowrap}
+table.mx th{color:var(--muted);font-weight:500}
+table.mx td.me{outline:2px solid var(--ink)}
+
+/* plan editor */
+table.ed{border-collapse:collapse;width:100%;font-size:13px;min-width:860px}
+table.ed th{position:sticky;top:0;background:var(--surface-2);text-align:right;font-size:12px;color:var(--muted);padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.ed th:nth-child(-n+2),table.ed td:nth-child(-n+2){text-align:left}
+table.ed td{padding:3px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+table.ed input{width:100%;text-align:right;padding:4px 6px}
+table.ed input.w{width:110px} table.ed input.s{width:72px}
+table.ed tr.grp td{background:var(--surface-2);font-weight:600;padding:7px 8px}
+.edbox{max-height:62vh;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+textarea{width:100%;min-height:120px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
+
+/* upload */
+.drop{border:2px dashed var(--line);border-radius:12px;padding:26px 18px;text-align:center;background:var(--surface);cursor:pointer}
+.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.files{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px;margin-top:12px}
+.msg{padding:10px 14px;border-radius:8px;margin-block:10px;font-size:13.5px}
+.msg.ok{background:var(--good-bg);color:var(--good)} .msg.err{background:var(--bad-bg);color:var(--bad)} .msg.info{background:var(--accent-soft);color:var(--accent)}
+.list{display:flex;flex-direction:column;gap:6px}
+.li{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 12px}
+.li .grow{flex:1;min-width:180px}
+.empty{padding:40px 16px;text-align:center;color:var(--muted)}
+.empty b{display:block;color:var(--ink);font:600 16px var(--f-display);margin-bottom:6px}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="row1">
+      <div class="brand"><h1>План продаж Ozon</h1><span class="tag">план / факт</span></div>
+      <div class="ctl"><label for="monthSel">Месяц</label><select id="monthSel"></select></div>
+      <div class="ctl"><span>ЧП</span>
+        <div class="seg" id="modeSeg" role="group" aria-label="Какую прибыль считать">
+          <button type="button" data-mode="net">чистая</button><button type="button" data-mode="margin">маржинальная</button>
+        </div>
+      </div>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button type="button" data-tab="tracker">Трекер</button>
+      <button type="button" data-tab="sim">Что выгоднее</button>
+      <button type="button" data-tab="history">История</button>
+      <button type="button" data-tab="plan">План месяца</button>
+      <button type="button" data-tab="upload">Загрузка данных</button>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="status" id="status"><span class="pill"><span class="dot"></span>Загружаю данные…</span></div>
+  <main>
+    <section id="tab-tracker"></section>
+    <section id="tab-sim" hidden></section>
+    <section id="tab-history" hidden></section>
+    <section id="tab-plan" hidden></section>
+    <section id="tab-upload" hidden></section>
+  </main>
+</div>
+
+<script>
+/* ============ утилиты ============ */
+const $ = s => document.querySelector(s);
+const NF = new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 0});
+const ok = v => v != null && isFinite(v);
+const R = v => ok(v) ? NF.format(Math.round(v)) : '–';
+const P = v => ok(v) ? Math.round(v * 100) + '%' : '–';
+const MN = v => {
+  if (!ok(v)) return '–';
+  const a = Math.abs(v);
+  if (a >= 1e6) return (v / 1e6).toLocaleString('ru-RU', {maximumFractionDigits: a >= 1e8 ? 0 : 2}) + ' млн';
+  if (a >= 1e4) return Math.round(v / 1e3).toLocaleString('ru-RU') + ' тыс';
+  return R(v);
+};
+const num = v => {
+  if (v == null || v === '') return 0;
+  if (typeof v === 'number') return isFinite(v) ? v : 0;
+  const n = parseFloat(String(v).replace(/[\s ₽%]/g, '').replace(',', '.'));
+  return isFinite(n) ? n : 0;
+};
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const pad = n => String(n).padStart(2, '0');
+const clone = o => JSON.parse(JSON.stringify(o));
+const MONTHS = ['Январь','Февраль','Март','Апрель','Май','Июнь','Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+const monthLabel = id => { const [y, m] = id.split('-').map(Number); return MONTHS[m - 1] + ' ' + y; };
+const pctCls = p => !ok(p) ? 'none' : p >= 1 ? 'good' : p >= 0.9 ? 'warn' : 'bad';
+const rentCls = (r, c) => {
+  if (!ok(r) || !c || !num(c.norm)) return 'none';
+  const mn = c.min != null && c.min !== '' ? num(c.min) : num(c.norm);
+  return r >= num(c.norm) ? 'good' : r >= mn ? 'warn' : 'bad';
+};
+const pref = {
+  get(k, d) { try { const v = localStorage.getItem('ozonPlan.ui.' + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem('ozonPlan.ui.' + k, JSON.stringify(v)); } catch (e) {} }
+};
+
+/* ============ хранилище: Google-таблица или браузер ============ */
+const Backend = (() => {
+  const gas = typeof google !== 'undefined' && google.script && google.script.run;
+  if (gas) {
+    const call = (fn, ...args) => new Promise((res, rej) =>
+      google.script.run.withSuccessHandler(res).withFailureHandler(e => rej(new Error(e && e.message || String(e))))[fn](...args));
+    return {
+      kind: 'gas',
+      load: async () => JSON.parse(await call('loadAll')),
+      saveMonth: (id, doc) => call('saveMonth', id, JSON.stringify(doc)),
+      deleteMonth: id => call('deleteMonth', id),
+      saveFact: (id, doc) => call('saveFact', id, doc.month, doc.period, JSON.stringify(doc)),
+      deleteFact: id => call('deleteFact', id),
+      importAll: data => call('importAll', JSON.stringify(data)),
+      saveHistory: rows => call('saveHistory', JSON.stringify(rows)),
+      backup: () => call('backupToDrive')
+    };
+  }
+  const KEY = 'ozonPlan.data.v1';
+  const read = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {months: {}, facts: {}}; } catch (e) { return {months: {}, facts: {}}; } };
+  const write = d => { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) { throw new Error('Браузер не дал сохранить данные (' + e.message + '). Сделайте экспорт в файл.'); } };
+  return {
+    kind: 'local',
+    load: async () => read(),
+    saveMonth: async (id, doc) => { const d = read(); d.months[id] = doc; write(d); },
+    deleteMonth: async id => { const d = read(); delete d.months[id]; write(d); },
+    saveFact: async (id, doc) => { const d = read(); d.facts[id] = doc; write(d); },
+    deleteFact: async id => { const d = read(); delete d.facts[id]; write(d); },
+    importAll: async data => { const d = read(); Object.assign(d.months, data.months || {}); Object.assign(d.facts, data.facts || {}); write(d); },
+    saveHistory: async () => {},
+    backup: null
+  };
+})();
+
+/* ============ состояние ============ */
+const S = {
+  months: {}, facts: {}, loaded: false, error: null,
+  mid: pref.get('mid', null), tab: pref.get('tab', 'tracker'), mode: pref.get('mode', 'net'),
+  scope: 'month', open: new Set(pref.get('open', [])), q: '',
+  draft: null, draftOf: null, dirty: false, planMsg: null, pl: null,
+  up: {files: [], parsed: {}, msg: null, period: null, confirmDel: null},
+  sim: {key: null, sc: null}
+};
+
+/* ============ периоды месяца: первая неделя до воскресенья, дальше пн–вс ============ */
+function periods(mid) {
+  const [y, m] = mid.split('-').map(Number);
+  const days = new Date(y, m, 0).getDate();
+  const list = [];
+  let s = 1;
+  while (s <= days) {
+    let e = s;
+    while (e < days && new Date(y, m - 1, e).getDay() !== 0) e++;
+    list.push({id: pad(s) + '-' + pad(e), from: s, to: e, days: e - s + 1, label: pad(s) + '.' + pad(m) + '–' + pad(e) + '.' + pad(m)});
+    s = e + 1;
+  }
+  return {list, days};
+}
+
+/* ============ расчёт ============ */
+const Z = () => ({qty: 0, rub: 0, done: 0, bought: 0, sales: 0, sold: 0, cost: 0, profit: 0});
+const addF = (a, b) => { for (const k in a) a[k] += b[k] || 0; return a; };
+
+function model(mid, mode) {
+  const M = S.months[mid];
+  if (!M) return null;
+  const {list: per, days} = periods(mid);
+  const F = {};
+  per.forEach(p => { const f = S.facts[mid + '_' + p.id]; if (f) F[p.id] = f; });
+  const loaded = per.filter(p => F[p.id]).reduce((s, p) => s + p.days, 0);
+  const pi = mode === 'margin' ? 4 : 3;
+  const scopes = ['month'].concat(per.map(p => p.id));
+  const catMap = {};
+  (M.categories || []).forEach(c => { catMap[c.cab + '|' + c.cat] = c; });
+  const tot = {}, cnt = {};
+  (M.plan || []).forEach(r => { tot[r.art] = (tot[r.art] || 0) + num(r.rub); cnt[r.art] = (cnt[r.art] || 0) + 1; });
+  // себестоимость и выкуп из отчётов — для артикулов, где в плане они не заданы (сначала этот месяц, потом последние отчёты)
+  const fu = {cost: {}, buy: {}};
+  Object.keys(S.facts).sort((a, b) => (a.startsWith(mid) ? 1 : 0) - (b.startsWith(mid) ? 1 : 0) || a.localeCompare(b)).forEach(id => {
+    const f = S.facts[id];
+    for (const a in (f.p || {})) { const q = f.p[a]; if (q[1] > 0 && q[2] > 0) fu.cost[a] = q[2] / q[1]; }
+    for (const a in (f.o || {})) { const o = f.o[a]; if (o[2] >= 10) fu.buy[a] = o[3] / o[2]; }
+  });
+  const hasV = v => v != null && v !== '';
+
+  const rows = (M.plan || []).map(r => {
+    const cc = catMap[r.cab + '|' + r.cat] || {};
+    const pick = k => (r[k] != null && r[k] !== '') ? r[k] : cc[k];
+    const c = {min: pick('min'), norm: pick('norm'), st: pick('st')};
+    const share = tot[r.art] > 0 ? num(r.rub) / tot[r.art] : 1 / cnt[r.art];
+    const n = {type: 'art', key: r.cab + '|' + r.cat + '|' + r.art, cab: r.cab, cat: r.cat, art: r.art, c, share,
+      planRub: num(r.rub), planQty: num(r.qty), planPrice: num(r.price),
+      planCost: hasV(r.cost) ? num(r.cost) : (fu.cost[r.art] || 0), planBuy: hasV(r.buy) && !r.buyGuess ? num(r.buy) : (fu.buy[r.art] || num(r.buy)), f: {}};
+    n.planChp = n.planQty * n.planBuy * n.planCost * num(c.norm);
+    scopes.forEach(s => { n.f[s] = Z(); });
+    per.forEach(p => {
+      const f = F[p.id]; if (!f) return;
+      const o = (f.o || {})[r.art], q = (f.p || {})[r.art];
+      if (!o && !q) return;
+      const x = {qty: (o ? o[0] : 0) * share, rub: (o ? o[1] : 0) * share, done: (o ? o[2] : 0) * share, bought: (o ? o[3] : 0) * share,
+        sales: (q ? q[0] : 0) * share, sold: (q ? q[1] : 0) * share, cost: (q ? q[2] : 0) * share, profit: (q ? (q[pi] || 0) : 0) * share};
+      addF(n.f[p.id], x); addF(n.f.month, x);
+    });
+    return n;
+  });
+
+  const catList = (M.categories || []).slice();
+  rows.forEach(r => { if (!catMap[r.cab + '|' + r.cat]) { const c = {cab: r.cab, cat: r.cat}; catMap[r.cab + '|' + r.cat] = c; catList.push(c); } });
+  const cats = catList.map(c => {
+    const kids = rows.filter(r => r.cab === c.cab && r.cat === c.cat);
+    // пороги категории: средние по артикулам с весом плана в ₽ (если пороги у всех одинаковые — те же самые)
+    const th = {};
+    ['min', 'norm', 'st'].forEach(k => {
+      const ks = kids.filter(x => x.c[k] != null && x.c[k] !== '');
+      const w = ks.reduce((a, x) => a + (x.planRub || 0), 0);
+      th[k] = ks.length ? (w > 0 ? ks.reduce((a, x) => a + num(x.c[k]) * x.planRub, 0) / w : num(ks[0].c[k])) : (c[k] != null && c[k] !== '' ? num(c[k]) : null);
+    });
+    const n = {type: 'cat', key: c.cab + '|' + c.cat, cab: c.cab, cat: c.cat, c: th, cdef: c, kids, f: {}};
+    scopes.forEach(s => { n.f[s] = kids.reduce((a, k) => addF(a, k.f[s]), Z()); });
+    const sumRub = kids.reduce((a, k) => a + k.planRub, 0), sumChp = kids.reduce((a, k) => a + k.planChp, 0);
+    const tgt = num(c.target);
+    n.planRub = tgt > 0 && sumRub === 0 ? tgt : sumRub;
+    n.planChp = tgt > 0 && sumRub === 0 ? tgt * num(c.buy) * num(c.cshare) * num(th.norm != null ? th.norm : c.norm) : sumChp;
+    n.planQty = kids.reduce((a, k) => a + k.planQty, 0);
+    return n;
+  });
+  const cabOrder = (M.cabinets || []).slice();
+  cats.forEach(c => { if (!cabOrder.includes(c.cab)) cabOrder.push(c.cab); });
+  const roll = (type, key, kids, extra) => {
+    const n = Object.assign({type, key, kids, f: {}}, extra);
+    scopes.forEach(s => { n.f[s] = kids.reduce((a, k) => addF(a, k.f[s]), Z()); });
+    n.planRub = kids.reduce((a, k) => a + k.planRub, 0);
+    n.planChp = kids.reduce((a, k) => a + k.planChp, 0);
+    n.planQty = kids.reduce((a, k) => a + k.planQty, 0);
+    return n;
+  };
+  const cabs = cabOrder.map(cab => roll('cab', cab, cats.filter(c => c.cab === cab), {cab}));
+  const total = roll('total', 'total', cabs, {});
+
+  const planArts = new Set(rows.map(r => r.art));
+  const out = {type: 'out', key: 'out', f: {}, planRub: 0, planChp: 0};
+  scopes.forEach(s => { out.f[s] = Z(); });
+  per.forEach(p => {
+    const f = F[p.id]; if (!f) return;
+    const x = Z();
+    for (const a in (f.o || {})) if (!planArts.has(a)) { const o = f.o[a]; x.qty += o[0] || 0; x.rub += o[1] || 0; x.done += o[2] || 0; x.bought += o[3] || 0; }
+    for (const a in (f.p || {})) if (!planArts.has(a)) { const q = f.p[a]; x.sales += q[0] || 0; x.sold += q[1] || 0; x.cost += q[2] || 0; x.profit += q[pi] || 0; }
+    addF(out.f[p.id], x); addF(out.f.month, x);
+  });
+  return {mid, M, per, days, loaded, F, rows, cats, cabs, total, out};
+}
+
+function met(n, scope, md) {
+  const f = n.f[scope] || Z();
+  let frac;
+  if (scope === 'month') frac = md.loaded / md.days;
+  else { const p = md.per.find(x => x.id === scope); frac = p ? p.days / md.days : 0; }
+  const plan = (n.planRub || 0) * frac, planChp = (n.planChp || 0) * frac;
+  return {
+    planMonth: n.planRub || 0, plan, planChp, fact: f.rub, qty: f.qty, chp: f.profit, cost: f.cost,
+    pct: plan > 0 ? f.rub / plan : null, pctChp: planChp > 0 ? f.profit / planChp : null,
+    rent: f.cost > 0 ? f.profit / f.cost : null, delta: f.rub - plan,
+    forecast: scope === 'month' && md.loaded ? f.rub / md.loaded * md.days : null
+  };
+}
+
+let MD = null;
+function recompute() { MD = S.mid ? model(S.mid, S.mode) : null; }
+
+/* ============ сводка для вкладки «История» в таблице ============ */
+function historyRows() {
+  return Object.keys(S.months).sort().map(mid => {
+    const md = model(mid, S.mode), t = met(md.total, 'month', md);
+    const fc = md.loaded ? t.fact / md.loaded * md.days : null;
+    return {month: mid, loaded: md.loaded, days: md.days, planRub: Math.round(md.total.planRub), factRub: Math.round(t.fact),
+      pct: ok(t.pct) ? t.pct : '', forecast: ok(fc) ? Math.round(fc) : '', pctMonth: ok(fc) && md.total.planRub ? fc / md.total.planRub : '',
+      planChp: Math.round(md.total.planChp), factChp: Math.round(t.chp), pctChp: ok(t.pctChp) ? t.pctChp : '', rent: ok(t.rent) ? t.rent : ''};
+  });
+}
+function pushHistory() { Backend.saveHistory(historyRows()).catch(() => {}); }
+
+/* ============ каркас ============ */
+function setStatus() {
+  const el = $('#status');
+  if (!S.loaded) { el.innerHTML = '<span class="pill"><span class="dot"></span>Загружаю данные…</span>'; return; }
+  const where = Backend.kind === 'gas'
+    ? '<span class="pill"><span class="dot ok"></span>Данные в Google-таблице</span>'
+    : '<span class="pill"><span class="dot off"></span>Локальный режим: данные в этом браузере, делайте экспорт</span>';
+  let info = '';
+  if (MD) {
+    const done = MD.per.filter(p => MD.F[p.id]).map(p => p.label);
+    info = `<span>${monthLabel(MD.mid)}: данные за <b>${MD.loaded}</b> из ${MD.days} дн.${done.length ? ' (' + done.join(', ') + ')' : ''}</span>`;
+  }
+  el.innerHTML = where + info + (S.error ? `<span class="neg">${esc(S.error)}</span>` : '');
+}
+
+function fillMonthSel() {
+  const sel = $('#monthSel');
+  const ids = Object.keys(S.months).sort().reverse();
+  if (!ids.length) { sel.innerHTML = '<option value="">нет месяцев</option>'; return; }
+  if (!S.mid || !S.months[S.mid]) S.mid = ids[0];
+  sel.innerHTML = ids.map(id => `<option value="${id}"${id === S.mid ? ' selected' : ''}>${monthLabel(id)}</option>`).join('');
+}
+
+function renderAll() {
+  recompute();
+  fillMonthSel(); recompute();
+  setStatus();
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
+  document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === S.mode));
+  ['tracker', 'sim', 'history', 'plan', 'upload'].forEach(t => { $('#tab-' + t).hidden = t !== S.tab; });
+  ({tracker: renderTracker, sim: renderSim, history: renderHistory, plan: renderPlan, upload: renderUpload})[S.tab]();
+}
+
+function noMonth(el) {
+  el.innerHTML = `<div class="empty card"><b>Пока нет ни одного месяца</b>
+    Загрузите план из Excel на вкладке «План месяца» или импортируйте файл с данными там же.</div>`;
+}
+
+/* ============ ТРЕКЕР ============ */
+function renderTracker() {
+  const el = $('#tab-tracker');
+  if (!MD) return noMonth(el);
+  const md = MD, sc = S.scope === 'month' || md.per.some(p => p.id === S.scope) ? S.scope : 'month';
+  S.scope = sc;
+  const isM = sc === 'month';
+  const t = met(md.total, sc, md), o = met(md.out, sc, md);
+  const scopeName = isM ? 'с начала месяца' : md.per.find(p => p.id === sc).label;
+
+  const chips = [`<button type="button" class="chip${isM ? ' on' : ''}" data-scope="month">Месяц</button>`]
+    .concat(md.per.map(p => `<button type="button" class="chip${sc === p.id ? ' on' : ''}" data-scope="${p.id}">${p.label}${md.F[p.id] ? '' : ' <span class="nd">нет данных</span>'}</button>`)).join('');
+
+  const fcPct = isM && md.total.planRub ? t.forecast / md.total.planRub : null;
+  const tiles = `
+  <div class="tiles">
+    <div class="tile"><span class="lbl">Заказы ${esc(scopeName)}</span><span class="big">${MN(t.fact)} ₽</span>
+      <span class="sub">план ${MN(t.plan)} ₽ · <span class="st ${pctCls(t.pct)}">${P(t.pct)}</span></span>
+      <div class="meter"><i class="${pctCls(t.pct)}" style="width:${Math.min(100, (t.pct || 0) * 100)}%"></i></div></div>
+    ${isM ? `<div class="tile"><span class="lbl">Прогноз на месяц</span><span class="big">${MN(t.forecast)} ₽</span>
+      <span class="sub">план месяца ${MN(md.total.planRub)} ₽ · <span class="st ${pctCls(fcPct)}">${P(fcPct)}</span></span>
+      <div class="meter"><i class="${pctCls(fcPct)}" style="width:${Math.min(100, (fcPct || 0) * 100)}%"></i></div></div>` : ''}
+    <div class="tile"><span class="lbl">Чистая прибыль ${S.mode === 'margin' ? '(маржинальная)' : ''}</span><span class="big">${MN(t.chp)} ₽</span>
+      <span class="sub">план ${MN(t.planChp)} ₽ · <span class="st ${pctCls(t.pctChp)}">${P(t.pctChp)}</span></span>
+      <div class="meter"><i class="${pctCls(t.pctChp)}" style="width:${Math.min(100, (t.pctChp || 0) * 100)}%"></i></div></div>
+    <div class="tile"><span class="lbl">Рента факт</span><span class="big">${P(t.rent)}</span>
+      <span class="sub">ЧП / себестоимость продаж по артикулам плана</span></div>
+    <div class="tile"><span class="lbl">Вне плана</span><span class="big">${MN(o.fact)} ₽</span>
+      <span class="sub">заказы по остальным артикулам · ЧП ${MN(o.chp)} ₽</span></div>
+  </div>`;
+
+  const cm = md.cats.map(c => ({c, m: met(c, sc, md)})).filter(x => x.m.plan > 0 || x.m.fact > 0);
+  const down = cm.filter(x => x.m.delta < 0).sort((a, b) => a.m.delta - b.m.delta).slice(0, 5);
+  const up = cm.filter(x => x.m.delta > 0).sort((a, b) => b.m.delta - a.m.delta).slice(0, 5);
+  const mv = arr => arr.length ? arr.map(x => `<span class="nm">${esc(x.c.cat)} <small>${esc(x.c.cab)}</small></span>
+      <span class="num ${x.m.delta < 0 ? 'neg' : 'pos'}">${x.m.delta > 0 ? '+' : ''}${R(x.m.delta)} ₽</span><span class="st ${pctCls(x.m.pct)}">${P(x.m.pct)}</span>`).join('')
+    : '<span class="hint">нет</span>';
+  const movers = `<div class="split">
+    <div class="card"><h2 style="margin-top:0">Больше всего отстают</h2><div class="mover">${mv(down)}</div></div>
+    <div class="card"><h2 style="margin-top:0">Перевыполняют</h2><div class="mover">${mv(up)}</div></div></div>`;
+
+  const head = isM
+    ? ['Позиция', 'План месяца, ₽', 'План на дату, ₽', 'Факт, ₽', '%', 'Δ к плану, ₽', 'Прогноз, ₽', 'ЧП план, ₽', 'ЧП факт, ₽', '% ЧП', 'Рента']
+    : ['Позиция', 'План, ₽', 'Факт, ₽', '%', 'Δ к плану, ₽', 'ЧП план, ₽', 'ЧП факт, ₽', '% ЧП', 'Рента'];
+  const q = S.q.trim().toLowerCase();
+  const line = (n, cls, name, extra) => {
+    const m = met(n, sc, md);
+    const c = n.c || null;
+    const rent = `<span class="st ${rentCls(m.rent, c)}">${P(m.rent)}</span>${c && num(c.norm) ? `<span class="sm">норма ${P(num(c.norm))}</span>` : ''}`;
+    const cells = isM
+      ? [R(m.planMonth), R(m.plan), R(m.fact), `<span class="st ${pctCls(m.pct)}">${P(m.pct)}</span>`, `<span class="${m.delta < 0 ? 'neg' : ''}">${R(m.delta)}</span>`, R(m.forecast), R(m.planChp), R(m.chp), `<span class="st ${pctCls(m.pctChp)}">${P(m.pctChp)}</span>`, rent]
+      : [R(m.plan), R(m.fact), `<span class="st ${pctCls(m.pct)}">${P(m.pct)}</span>`, `<span class="${m.delta < 0 ? 'neg' : ''}">${R(m.delta)}</span>`, R(m.planChp), R(m.chp), `<span class="st ${pctCls(m.pctChp)}">${P(m.pctChp)}</span>`, rent];
+    return `<tr class="${cls}"${extra || ''}><td class="nm-cell" title="${esc(name)}">${name}</td>${cells.map(x => `<td class="n">${x}</td>`).join('')}</tr>`;
+  };
+  let body = line(md.total, 'total', 'ИТОГО по плану');
+  md.cabs.forEach(cab => {
+    body += line(cab, 'cab', esc(cab.cab));
+    cab.kids.forEach(cat => {
+      const arts = q ? cat.kids.filter(a => a.art.toLowerCase().includes(q)) : cat.kids;
+      if (q && !arts.length && !cat.cat.toLowerCase().includes(q)) return;
+      const open = q ? true : S.open.has(cat.key);
+      body += line(cat, 'cat' + (open ? ' open' : ''), esc(cat.cat), ` data-cat="${esc(cat.key)}"`);
+      if (open) (q && arts.length ? arts : cat.kids).forEach(a => { body += line(a, 'art', esc(a.art) + (a.share < 0.999 ? ` <span class="sm" style="display:inline">· доля ${P(a.share)}</span>` : '')); });
+    });
+  });
+  body += line(md.out, 'out', 'Артикулы вне плана');
+
+  el.innerHTML = `
+    <div class="bar">${chips}</div>
+    ${md.loaded ? '' : '<div class="msg info">За этот месяц ещё нет факта. Загрузите выгрузки на вкладке «Загрузка данных».</div>'}
+    ${tiles}${movers}
+    <div class="bar" style="margin-top:18px">
+      <input type="search" id="q" placeholder="Найти артикул или категорию" value="${esc(S.q)}" style="width:260px">
+      <button type="button" class="btn" id="expAll">Развернуть все</button>
+      <button type="button" class="btn" id="colAll">Свернуть</button>
+      <span class="spacer"></span>
+      <span class="hint">Цвет: зелёный ≥ 100% плана, жёлтый 90–99%, красный &lt; 90%. Рента: зелёный от нормы, жёлтый от минимума.</span>
+    </div>
+    <div class="tbox"><table class="t"><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
+}
+
+/* ============ ЧТО ВЫГОДНЕЕ (симулятор) ============ */
+function simOptions(md) {
+  const opts = [];
+  md.cats.forEach(c => { if (c.kids.length) opts.push({key: 'cat:' + c.key, label: c.cat + ' — ' + c.cab, grp: 'Категории'}); });
+  const arts = [...new Set(md.rows.map(r => r.art))].sort((a, b) => a.localeCompare(b, 'ru'));
+  arts.forEach(a => opts.push({key: 'art:' + a, label: a, grp: 'Артикулы'}));
+  return opts;
+}
+
+function simBase(md, key) {
+  let rows, planChp, name;
+  if (key.startsWith('cat:')) {
+    const k = key.slice(4); const cat = md.cats.find(c => c.key === k);
+    rows = cat ? cat.kids : []; planChp = cat ? cat.planChp : 0; name = cat ? cat.cat : k;
+  } else {
+    const a = key.slice(4); rows = md.rows.filter(r => r.art === a);
+    planChp = rows.reduce((s, r) => s + r.planChp, 0); name = a;
+  }
+  const f = rows.reduce((acc, r) => addF(acc, r.f.month), Z());
+  const T = md.total.f.month;
+  const planQty = rows.reduce((s, r) => s + r.planQty, 0), planRub = rows.reduce((s, r) => s + r.planRub, 0);
+  const wq = rows.reduce((s, r) => s + (r.planQty || 1), 0);
+  const planCost = rows.reduce((s, r) => s + r.planCost * (r.planQty || 1), 0) / (wq || 1);
+  const planBuy = rows.reduce((s, r) => s + r.planBuy * (r.planQty || 1), 0) / (wq || 1);
+  const normW = rows.reduce((s, r) => s + num(r.c.norm) * (r.planQty || 1), 0) / (wq || 1);
+  const price = f.sold > 0 ? f.sales / f.sold : f.qty > 0 ? f.rub / f.qty : planQty > 0 ? planRub / planQty : 0;
+  const cost = f.sold > 0 && f.cost > 0 ? f.cost / f.sold : planCost;
+  const buy = f.done > 0 ? f.bought / f.done : planBuy || 0.85;
+  let v = f.sales > 0 ? (f.sales - f.cost - f.profit) / f.sales : T.sales > 0 ? (T.sales - T.cost - T.profit) / T.sales : 0.6;
+  v = Math.min(Math.max(v, 0), 0.95);
+  const r0 = f.cost > 0 ? f.profit / f.cost : cost > 0 && price > 0 ? (price * (1 - v) - cost) / cost : normW;
+  const qtyMonth = md.loaded && f.qty > 0 ? f.qty / md.loaded * md.days : planQty;
+  const planPrice = planQty > 0 ? planRub / planQty : (rows.length === 1 ? rows[0].planPrice : 0);
+  return {name, price, cost, buy, v, r0, qtyMonth, planQty, planRub, planChp, planPrice, norm: normW, hasFact: f.sold > 0, factQty: f.qty};
+}
+
+function simCalc(b, s) {
+  const r = s.roi;
+  const price = b.cost * (1 + r) / (1 - b.v);
+  const sold = s.qty * b.buy;
+  const chp = sold * b.cost * r;
+  return {price, rub: s.qty * price, sold, chp, perUnit: s.qty > 0 ? chp / s.qty : 0, capital: sold * b.cost, dPrice: b.price > 0 ? price / b.price - 1 : null};
+}
+
+function defaultScenarios(b) {
+  const q = Math.max(1, Math.round(b.qtyMonth || b.planQty || 100));
+  const r = b.r0 > 0.02 ? b.r0 : (b.norm || 0.3);
+  return [
+    {name: 'Как сейчас', qty: q, roi: r, c: 'var(--sa)'},
+    {name: 'Больше объёма', qty: Math.round(q * 1.4), roi: Math.max(0.05, r * 0.6), c: 'var(--sb)'},
+    {name: 'Выше маржа', qty: Math.round(q * 0.7), roi: r * 1.5, c: 'var(--sc)'}
+  ];
+}
+
+function renderSim() {
+  const el = $('#tab-sim');
+  if (!MD) return noMonth(el);
+  const md = MD, opts = simOptions(md);
+  if (!S.sim.key || !opts.some(o => o.key === S.sim.key)) { S.sim.key = opts[0] ? opts[0].key : null; S.sim.sc = null; }
+  if (!S.sim.key) { el.innerHTML = '<div class="empty card"><b>В плане нет артикулов</b></div>'; return; }
+  const b = simBase(md, S.sim.key);
+  if (!S.sim.sc) S.sim.sc = defaultScenarios(b);
+  const grp = g => opts.filter(o => o.grp === g).map(o => `<option value="${esc(o.key)}"${o.key === S.sim.key ? ' selected' : ''}>${esc(o.label)}</option>`).join('');
+  const qMax = Math.max(10, Math.round(Math.max(b.qtyMonth, b.planQty) * 3));
+  const rMax = Math.max(300, Math.round(Math.max(b.r0, b.norm) * 300));
+  el.innerHTML = `
+    <div class="card">
+      <div class="bar" style="margin:0">
+        <label class="ctl" for="simSel">Считаем для</label>
+        <select id="simSel" style="max-width:420px"><optgroup label="Категории">${grp('Категории')}</optgroup><optgroup label="Артикулы">${grp('Артикулы')}</optgroup></select>
+        <button type="button" class="btn" id="simReset">Сбросить сценарии</button>
+      </div>
+      <div class="base">
+        <div><b>${R(b.price)} ₽</b><span>цена продажи сейчас</span></div>
+        <div><b>${R(b.cost)} ₽</b><span>себестоимость за шт</span></div>
+        <div><b>${P(b.buy)}</b><span>выкуп</span></div>
+        <div><b>${P(b.v)}</b><span>расходы МП, реклама, налоги от цены</span></div>
+        <div><b>${P(b.r0)}</b><span>рента сейчас</span></div>
+        <div><b>${R(b.qtyMonth)} шт</b><span>заказов в месяц по текущему темпу</span></div>
+        <div><b>${R(b.planQty)} шт · ${P(b.norm)}</b><span>план: заказы и норма ренты</span></div>
+        <div><b>${b.planPrice ? R(b.planPrice) + ' ₽' : '–'}</b><span>плановая цена за шт</span></div>
+      </div>
+      ${b.hasFact ? '' : '<div class="msg info">Продаж по позиции в загруженных периодах нет, расчёт по плановым себестоимости и выкупу и средним расходам по всему плану.</div>'}
+      <p class="hint" style="margin-top:10px">Вы задаёте заказы в месяц и ренту. Цена считается из структуры расходов: при ренте R цена = себестоимость × (1 + R) / (1 − доля расходов). ЧП = заказы × выкуп × себестоимость × R. Как спрос реагирует на цену, сайт не знает, поэтому количество при другой цене вы ставите сами.</p>
+    </div>
+    <div class="sim-grid" style="margin-top:10px">
+      ${S.sim.sc.map((s, i) => `
+      <div class="card sc" style="--c:${s.c}">
+        <div class="head"><input type="text" id="scn${i}" data-i="${i}" data-f="name" value="${esc(s.name)}" aria-label="Название сценария"></div>
+        <div class="fld"><label for="scq${i}">Заказов в месяц, шт</label><input type="number" id="scq${i}" data-i="${i}" data-f="qty" value="${Math.round(s.qty)}" min="0" step="1">
+          <input type="range" id="scqr${i}" data-i="${i}" data-f="qty" min="0" max="${qMax}" step="1" value="${Math.round(s.qty)}" aria-label="Заказов в месяц"></div>
+        <div class="fld"><label for="scr${i}">Рента (ROI), %</label><input type="number" id="scr${i}" data-i="${i}" data-f="roi" value="${Math.round(s.roi * 100)}" step="1">
+          <input type="range" id="scrr${i}" data-i="${i}" data-f="roi" min="0" max="${rMax}" step="1" value="${Math.round(s.roi * 100)}" aria-label="Рента"></div>
+      </div>`).join('')}
+    </div>
+    <div class="card" style="margin-top:10px"><div id="simOut"></div></div>
+    <div class="split">
+      <div class="card"><h2 style="margin-top:0">Сколько продать для той же прибыли</h2><div class="chartbox" id="simChart"></div>
+        <p class="hint">Линия: сколько заказов нужно при каждой ренте, чтобы ЧП была как в сценарии «${esc(S.sim.sc[0].name)}». Точка выше линии зарабатывает больше.</p></div>
+      <div class="card"><h2 style="margin-top:0">ЧП при разных объёме и ренте</h2><div class="chartbox" id="simMx"></div>
+        <p class="hint">Отклонения от сценария «${esc(S.sim.sc[0].name)}» (обведён). Зелёный — больше прибыли, красный — меньше.</p></div>
+    </div>`;
+  simUpdate();
+}
+
+function simUpdate() {
+  const md = MD; if (!md) return;
+  const b = simBase(md, S.sim.key);
+  const sc = S.sim.sc;
+  const res = sc.map(s => simCalc(b, s));
+  const planRes = simCalc(b, {qty: b.planQty, roi: b.norm});
+  const best = res.reduce((bi, r, i) => r.chp > res[bi].chp ? i : bi, 0);
+  const rowsDef = [
+    ['Заказов в месяц, шт', (s) => R(s.qty), () => R(b.planQty)],
+    ['Рента', (s) => P(s.roi), () => P(b.norm)],
+    ['Нужная цена, ₽', (s, r) => R(r.price) + (ok(r.dPrice) ? ` <span class="sm" style="display:inline">${r.dPrice >= 0 ? '+' : ''}${P(r.dPrice)}</span>` : ''), (r) => R(r.price)],
+    ['Сумма заказов, ₽', (s, r) => R(r.rub), (r) => R(r.rub)],
+    ['Выкуплено, шт', (s, r) => R(r.sold), (r) => R(r.sold)],
+    ['Деньги в товаре (с/с выкупленного), ₽', (s, r) => R(r.capital), (r) => R(r.capital)],
+    ['ЧП за месяц, ₽', (s, r, i) => R(r.chp), (r) => R(r.chp), true],
+    ['ЧП на 1 заказ, ₽', (s, r) => R(r.perUnit), (r) => R(r.perUnit)],
+    ['ЧП к плану месяца', (s, r) => b.planChp > 0 ? `<span class="st ${pctCls(r.chp / b.planChp)}">${P(r.chp / b.planChp)}</span>` : '–', (r) => b.planChp > 0 ? P(r.chp / b.planChp) : '–']
+  ];
+  const table = `<table class="cmp"><thead><tr><th></th>${sc.map(s => `<th style="color:${s.c}">${esc(s.name)}</th>`).join('')}<th>План</th></tr></thead><tbody>
+    ${rowsDef.map(([lbl, fn, pf, hl]) => `<tr><td>${lbl}</td>${sc.map((s, i) => `<td class="${hl && i === best ? 'best' : ''}">${fn(s, res[i], i)}</td>`).join('')}<td>${pf(planRes)}</td></tr>`).join('')}
+  </tbody></table>`;
+  const a = res[0], bs = res[best];
+  let verdict;
+  if (best === 0) verdict = `Больше всего ЧП даёт «${esc(sc[0].name)}»: ${R(a.chp)} ₽ в месяц.`;
+  else verdict = `Больше всего ЧП даёт «${esc(sc[best].name)}»: ${R(bs.chp)} ₽, на ${R(bs.chp - a.chp)} ₽ больше, чем «${esc(sc[0].name)}». Для этого цена ${R(bs.price)} ₽ (${bs.dPrice >= 0 ? '+' : ''}${P(bs.dPrice)} к текущей) и ${R(sc[best].qty)} заказов.`;
+  const eq = sc.slice(1).map((s, i) => {
+    const need = s.roi > 0 ? a.chp / (b.buy * b.cost * s.roi) : null;
+    return ok(need) ? `При ренте ${P(s.roi)} («${esc(s.name)}») для той же ЧП, что в «${esc(sc[0].name)}», нужно ${R(need)} заказов (${sc[0].qty > 0 ? P(need / sc[0].qty) : '–'} от текущего объёма).` : '';
+  }).filter(Boolean).join(' ');
+  $('#simOut').innerHTML = table + `<p class="verdict">${verdict}</p><p class="hint">${eq} Деньги в товаре показывают, сколько себестоимости заморожено в проданном объёме: при большом объёме и низкой ренте прибыль на вложенный рубль ниже.</p>`;
+  $('#simChart').innerHTML = isoChart(b, sc, res);
+  $('#simMx').innerHTML = matrix(b, sc[0]);
+}
+
+function isoChart(b, sc, res) {
+  const W = 560, H = 300, L = 56, Rr = 16, T = 26, B = 40;
+  const target = res[0].chp;
+  const rMax = Math.max(...sc.map(s => s.roi), b.r0, 0.1) * 1.35;
+  const qTop = Math.max(...sc.map(s => s.qty), 1) * 1.8;
+  const x = r => L + (r / rMax) * (W - L - Rr), y = q => H - B - (Math.min(q, qTop) / qTop) * (H - T - B);
+  const k = b.buy * b.cost;
+  let path = '', area = '';
+  if (target > 0 && k > 0) {
+    const pts = [];
+    for (let i = 1; i <= 80; i++) { const r = rMax * i / 80; const q = target / (k * r); if (q <= qTop * 1.05) pts.push([x(r), y(q)]); }
+    if (pts.length) {
+      path = 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' L');
+      area = `${path} L${x(rMax).toFixed(1)} ${T} L${pts[0][0].toFixed(1)} ${T} Z`;
+    }
+  }
+  const ticksX = [0, 0.25, 0.5, 0.75, 1].map(f => rMax * f), ticksY = [0, 0.25, 0.5, 0.75, 1].map(f => qTop * f);
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W}px" role="img" aria-label="Кривая равной прибыли">
+    ${ticksY.map(q => `<line x1="${L}" x2="${W - Rr}" y1="${y(q)}" y2="${y(q)}" stroke="var(--line)"/><text x="${L - 6}" y="${y(q) + 4}" text-anchor="end">${R(q)}</text>`).join('')}
+    ${ticksX.map(r => `<text x="${x(r)}" y="${H - B + 16}" text-anchor="middle">${P(r)}</text>`).join('')}
+    <text x="${(L + W - Rr) / 2}" y="${H - 6}" text-anchor="middle">рента (ROI)</text>
+    <text x="${L - 6}" y="12" text-anchor="end">шт/мес</text>
+    ${area ? `<path d="${area}" fill="var(--good-bg)" opacity=".7"/>` : ''}
+    ${path ? `<path d="${path}" fill="none" stroke="var(--ink)" stroke-width="1.6" stroke-dasharray="4 3"/>` : ''}
+    ${sc.map((s, i) => `<circle cx="${x(s.roi)}" cy="${y(s.qty)}" r="6" fill="${s.c}" stroke="var(--surface)" stroke-width="2"/>
+      <text class="lbl-strong" x="${x(s.roi) + 9}" y="${y(s.qty) - 8}">${esc(s.name)}</text>`).join('')}
+  </svg>`;
+}
+
+function matrix(b, s0) {
+  const qf = [0.6, 0.8, 1, 1.2, 1.4], rf = [0.6, 0.8, 1, 1.2, 1.4];
+  const base = simCalc(b, s0).chp;
+  const cell = (q, r) => simCalc(b, {qty: q, roi: r}).chp;
+  const color = v => {
+    if (!(base > 0)) return '';
+    const d = v / base - 1, a = Math.min(Math.abs(d), 0.6) / 0.6;
+    return d >= 0 ? `background:color-mix(in srgb, var(--good-bg) ${30 + a * 70}%, transparent)` : `background:color-mix(in srgb, var(--bad-bg) ${30 + a * 70}%, transparent)`;
+  };
+  return `<table class="mx"><thead><tr><th>шт \\ рента</th>${rf.map(f => `<th>${P(s0.roi * f)}</th>`).join('')}</tr></thead><tbody>
+    ${qf.map(fq => `<tr><th>${R(s0.qty * fq)}</th>${rf.map(fr => { const v = cell(s0.qty * fq, s0.roi * fr); return `<td class="${fq === 1 && fr === 1 ? 'me' : ''}" style="${color(v)}">${MN(v)}</td>`; }).join('')}</tr>`).join('')}
+  </tbody></table>`;
+}
+
+/* ============ ИСТОРИЯ ============ */
+function renderHistory() {
+  const el = $('#tab-history');
+  const ids = Object.keys(S.months).sort();
+  if (!ids.length) return noMonth(el);
+  const data = ids.map(mid => {
+    const md = model(mid, S.mode), t = met(md.total, 'month', md);
+    const fc = md.loaded ? t.fact / md.loaded * md.days : null;
+    return {mid, md, t, fc};
+  });
+  const last = data.slice(-12);
+  const W = Math.max(360, last.length * 90 + 70), H = 240, L = 60, B = 34, T = 12;
+  const maxV = Math.max(1, ...last.map(d => Math.max(d.md.total.planRub, d.fc || 0, d.t.fact)));
+  const y = v => H - B - v / maxV * (H - T - B), bw = 26;
+  const ticks = [0, 0.25, 0.5, 0.75, 1].map(f => maxV * f);
+  const chart = `<svg viewBox="0 0 ${W} ${H}" width="${W}" role="img" aria-label="План и факт по месяцам">
+    ${ticks.map(v => `<line x1="${L}" x2="${W - 8}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${MN(v)}</text>`).join('')}
+    ${last.map((d, i) => {
+      const cx = L + 20 + i * 90;
+      const full = d.md.loaded === d.md.days;
+      return `<rect x="${cx}" y="${y(d.md.total.planRub)}" width="${bw}" height="${H - B - y(d.md.total.planRub)}" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+        ${!full && d.fc ? `<rect x="${cx + bw + 4}" y="${y(d.fc)}" width="${bw}" height="${H - B - y(d.fc)}" fill="var(--accent-soft)" stroke="var(--accent)" stroke-dasharray="3 2"/>` : ''}
+        <rect x="${cx + bw + 4}" y="${y(d.t.fact)}" width="${bw}" height="${H - B - y(d.t.fact)}" fill="var(--accent)"/>
+        <text x="${cx + bw + 2}" y="${H - B + 15}" text-anchor="middle">${MONTHS[+d.mid.slice(5) - 1].slice(0, 3).toLowerCase()} ${d.mid.slice(2, 4)}</text>`;
+    }).join('')}
+  </svg>`;
+  const rows = data.slice().reverse().map(d => {
+    const md = d.md, t = d.t, pm = md.total.planRub ? (d.fc || 0) / md.total.planRub : null;
+    const cabRows = md.cabs.map(c => {
+      const m = met(c, 'month', md), fc = md.loaded ? m.fact / md.loaded * md.days : null;
+      return `<tr class="art"><td>${esc(c.cab)}</td><td class="n"></td><td class="n">${R(c.planRub)}</td><td class="n">${R(m.fact)}</td><td class="n"><span class="st ${pctCls(m.pct)}">${P(m.pct)}</span></td><td class="n">${R(fc)}</td><td class="n">${P(c.planRub ? fc / c.planRub : null)}</td><td class="n">${R(c.planChp)}</td><td class="n">${R(m.chp)}</td><td class="n"><span class="st ${pctCls(m.pctChp)}">${P(m.pctChp)}</span></td><td class="n">${P(m.rent)}</td></tr>`;
+    }).join('');
+    return `<tr class="cab"><td>${monthLabel(d.mid)}</td><td class="n">${md.loaded} из ${md.days}</td><td class="n">${R(md.total.planRub)}</td><td class="n">${R(t.fact)}</td><td class="n"><span class="st ${pctCls(t.pct)}">${P(t.pct)}</span></td><td class="n">${R(d.fc)}</td><td class="n"><span class="st ${pctCls(pm)}">${P(pm)}</span></td><td class="n">${R(md.total.planChp)}</td><td class="n">${R(t.chp)}</td><td class="n"><span class="st ${pctCls(t.pctChp)}">${P(t.pctChp)}</span></td><td class="n">${P(t.rent)}</td></tr>${cabRows}`;
+  }).join('');
+  el.innerHTML = `
+    <h2>План и факт по месяцам</h2>
+    <div class="card chartbox">${chart}
+      <p class="hint">Контур — план месяца, синяя заливка — факт заказов, пунктир — прогноз до конца месяца, если месяц ещё не закрыт.</p></div>
+    <h2>Таблица</h2>
+    <div class="tbox" style="max-height:none"><table class="t"><thead><tr><th>Месяц / кабинет</th><th>Дней с данными</th><th>План заказы, ₽</th><th>Факт заказы, ₽</th><th>% к плану на дату</th><th>Прогноз / итог, ₽</th><th>% от плана месяца</th><th>План ЧП, ₽</th><th>Факт ЧП, ₽</th><th>% ЧП</th><th>Рента</th></tr></thead><tbody>${rows}</tbody></table></div>
+    <p class="hint">Та же сводка сохраняется во вкладку «История» Google-таблицы при каждом сохранении плана или загрузке данных.</p>`;
+}
+
+/* ============ ПЛАН МЕСЯЦА ============ */
+const PLAN_COLS = ['Кабинет', 'Категория', 'Артикул', 'Плановая цена за ед., ₽', 'План заказов, шт', 'План заказов, ₽', 'Пороговая ROI', 'Норм ROI', 'Сверх ROI'];
+const nextMonthId = base => {
+  const b = base || (new Date().getFullYear() + '-' + pad(new Date().getMonth() + 1));
+  const [y, m] = b.split('-').map(Number);
+  return m === 12 ? (y + 1) + '-01' : y + '-' + pad(m + 1);
+};
+const has = v => v != null && v !== '';
+const pctIn = v => has(v) ? Math.round(num(v) * 1000) / 10 : '';
+
+function ensureDraft() {
+  if (!S.mid || !S.months[S.mid]) { S.draft = null; return; }
+  if (!S.dirty || S.draftOf !== S.mid) { S.draft = clone(S.months[S.mid]); S.draftOf = S.mid; S.dirty = false; }
+}
+
+/* --- чтение Excel с планом --- */
+function parsePlan(rows) {
+  let hi = -1;
+  for (let i = 0; i < Math.min(rows.length, 15); i++) {
+    if ((rows[i] || []).some(h => /артикул/i.test(String(h ?? '')))) { hi = i; break; }
+  }
+  if (hi < 0) throw new Error('Не нашёл строку заголовков: нужна колонка «Артикул».');
+  const head = (rows[hi] || []).map(h => String(h ?? '').trim().toLowerCase());
+  const col = {};
+  head.forEach((h, i) => {
+    if (!h) return;
+    if (col.art == null && /артикул/.test(h)) col.art = i;
+    else if (col.cab == null && /кабинет/.test(h)) col.cab = i;
+    else if (col.cat == null && /категор/.test(h)) col.cat = i;
+    else if (col.price == null && /цен/.test(h)) col.price = i;
+    else if (col.min == null && /порог|мин/.test(h)) col.min = i;
+    else if (col.st == null && /сверх|макс/.test(h)) col.st = i;
+    else if (col.norm == null && /норм/.test(h)) col.norm = i;
+    else if (col.qty == null && /шт|кол-?во|количеств/.test(h)) col.qty = i;
+    else if (col.rub == null && /₽|руб|деньг|сумм/.test(h)) col.rub = i;
+  });
+  const miss = [['cab', 'Кабинет'], ['cat', 'Категория'], ['art', 'Артикул']].filter(([k]) => col[k] == null).map(x => x[1]);
+  if (miss.length) throw new Error('Нет колонок: ' + miss.join(', ') + '.');
+  if (col.qty == null && col.rub == null) throw new Error('Нужна хотя бы одна из колонок «План заказов, шт» или «План заказов, ₽».');
+  const out = [], warn = [];
+  let cab = '', cat = '';
+  rows.slice(hi + 1).forEach((r, k) => {
+    r = r || [];
+    const art = String(r[col.art] ?? '').trim();
+    if (has(r[col.cab]) && String(r[col.cab]).trim()) cab = String(r[col.cab]).trim();
+    if (has(r[col.cat]) && String(r[col.cat]).trim()) cat = String(r[col.cat]).trim();
+    if (!art || /^итог/i.test(art)) return;
+    if (!cab || !cat) { warn.push(`строка ${hi + k + 2}: нет кабинета или категории у «${art}»`); return; }
+    const g = c => col[c] == null || !has(r[col[c]]) ? null : num(r[col[c]]);
+    out.push({cab, cat, art, price: g('price'), qty: g('qty'), rub: g('rub'), min: g('min'), norm: g('norm'), st: g('st')});
+  });
+  // ROI: в процентах (120) или долях (1,2) — решаем по колонке целиком
+  ['min', 'norm', 'st'].forEach(k => {
+    const vals = out.map(x => x[k]).filter(v => v != null);
+    if (vals.some(v => v > 10)) out.forEach(x => { if (x[k] != null) x[k] = x[k] / 100; });
+  });
+  out.forEach(x => {
+    if (x.rub == null && x.qty != null && x.price) x.rub = Math.round(x.qty * x.price);
+    if (x.qty == null && x.rub != null && x.price) x.qty = Math.round(x.rub / x.price);
+    if (x.price == null && x.qty && x.rub) x.price = Math.round(x.rub / x.qty);
+    x.qty = x.qty || 0; x.rub = x.rub || 0;
+  });
+  const seen = new Set(), dup = [];
+  out.forEach(x => { const key = x.cab + '|' + x.art; if (seen.has(key)) dup.push(x.art + ' (' + x.cab + ')'); seen.add(key); });
+  if (dup.length) warn.push('артикул повторяется в одном кабинете: ' + dup.slice(0, 6).join(', ') + (dup.length > 6 ? '…' : '') + ' — строки сложатся как разные позиции');
+  if (!out.length) throw new Error('В файле нет строк с артикулами.');
+  return {rows: out, warn};
+}
+
+/* себестоимость и выкуп: из этого месяца, из других месяцев, из последних отчётов */
+function costBuyLookup(targetMid) {
+  const byCabArt = {}, byArt = {};
+  const mids = Object.keys(S.months).sort().reverse();
+  if (targetMid && S.months[targetMid]) mids.unshift(targetMid);
+  mids.forEach(mid => (S.months[mid].plan || []).forEach(r => {
+    const v = {cost: has(r.cost) ? num(r.cost) : null, buy: has(r.buy) ? num(r.buy) : null};
+    const k = r.cab + '|' + r.art;
+    if (!byCabArt[k] && (v.cost != null || v.buy != null)) byCabArt[k] = v;
+    if (!byArt[r.art] && (v.cost != null || v.buy != null)) byArt[r.art] = v;
+  }));
+  const fact = {};
+  Object.keys(S.facts).sort().reverse().forEach(id => {
+    const f = S.facts[id];
+    for (const a in (f.p || {})) { const p = f.p[a]; if (p[1] > 0 && p[2] > 0) { fact[a] = fact[a] || {}; if (fact[a].cost == null) fact[a].cost = p[2] / p[1]; } }
+    for (const a in (f.o || {})) { const o = f.o[a]; if (o[2] >= 10) { fact[a] = fact[a] || {}; if (fact[a].buy == null) fact[a].buy = o[3] / o[2]; } }
+  });
+  return (cab, art) => {
+    const a = byCabArt[cab + '|' + art] || {}, b = byArt[art] || {}, c = fact[art] || {};
+    const cost = a.cost != null ? a.cost : b.cost != null ? b.cost : c.cost != null ? Math.round(c.cost * 100) / 100 : null;
+    const buy = a.buy != null ? a.buy : b.buy != null ? b.buy : c.buy != null ? Math.round(c.buy * 10000) / 10000 : null;
+    return {cost, buy};
+  };
+}
+
+function buildPlanDoc(parsed, mid) {
+  const base = S.months[mid] ? clone(S.months[mid]) : {};
+  const look = costBuyLookup(mid);
+  const plan = parsed.rows.map(x => Object.assign({cab: x.cab, cat: x.cat, art: x.art, price: x.price, qty: x.qty, rub: x.rub, min: x.min, norm: x.norm, st: x.st}, look(x.cab, x.art)));
+  const buys = plan.map(r => r.buy).filter(v => v != null);
+  const avgBuy = buys.length ? buys.reduce((a, b) => a + b, 0) / buys.length : 0.85;
+  plan.forEach(r => { if (r.buy == null) { r.buy = Math.round(avgBuy * 10000) / 10000; r.buyGuess = true; } });
+  const oldCats = {};
+  (base.categories || []).forEach(c => { oldCats[c.cab + '|' + c.cat] = c; });
+  const categories = [], cabinets = [];
+  plan.forEach(r => {
+    if (!cabinets.includes(r.cab)) cabinets.push(r.cab);
+    const k = r.cab + '|' + r.cat;
+    if (categories.some(c => c.cab + '|' + c.cat === k)) return;
+    const first = plan.find(x => x.cab === r.cab && x.cat === r.cat && x.norm != null) || {};
+    const old = oldCats[k] || {};
+    categories.push({cab: r.cab, cat: r.cat, min: has(first.min) ? first.min : old.min ?? null, norm: has(first.norm) ? first.norm : old.norm ?? null, st: has(first.st) ? first.st : old.st ?? null,
+      target: old.target ?? null, buy: old.buy ?? null, cshare: old.cshare ?? null, note: old.note || ''});
+  });
+  return {cabinets, categories, plan, copiedFrom: base.copiedFrom || null, source: 'Excel: ' + (S.pl && S.pl.name || '')};
+}
+
+/* --- выгрузка плана в Excel (xlsx собирается в браузере) --- */
+async function exportPlanXlsx(mid) {
+  const D = S.draftOf === mid && S.draft ? S.draft : S.months[mid];
+  if (!D) return;
+  const cats = {};
+  (D.categories || []).forEach(c => { cats[c.cab + '|' + c.cat] = c; });
+  const x = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+  const ref = (c, r) => String.fromCharCode(65 + c) + r;
+  const cell = (c, r, v, st) => {
+    if (v == null || v === '') return '';
+    if (typeof v === 'number' && isFinite(v)) return `<c r="${ref(c, r)}" s="${st}"><v>${v}</v></c>`;
+    return `<c r="${ref(c, r)}" t="inlineStr" s="${st}"><is><t>${x(v)}</t></is></c>`;
+  };
+  let rowsXml = `<row r="1">${PLAN_COLS.map((h, i) => cell(i, 1, h, 1)).join('')}</row>`;
+  (D.plan || []).forEach((r, k) => {
+    const c = cats[r.cab + '|' + r.cat] || {};
+    const th = key => has(r[key]) ? num(r[key]) : has(c[key]) ? num(c[key]) : null;
+    const price = has(r.price) && num(r.price) ? num(r.price) : (num(r.qty) > 0 && num(r.rub) > 0 ? Math.round(num(r.rub) / num(r.qty)) : null);
+    const n = k + 2;
+    rowsXml += `<row r="${n}">${[r.cab, r.cat, r.art].map((v, i) => cell(i, n, v, 0)).join('')}${cell(3, n, price, 2)}${cell(4, n, num(r.qty) || null, 2)}${cell(5, n, num(r.rub) || null, 2)}${['min', 'norm', 'st'].map((key, i) => cell(6 + i, n, th(key), 3)).join('')}</row>`;
+  });
+  const widths = [13, 24, 30, 14, 13, 16, 12, 12, 12];
+  const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${rowsXml}</sheetData></worksheet>`;
+  const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="9" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  const zip = new JSZip();
+  zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
+  zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
+  zip.file('xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="План месяца" sheetId="1" r:id="rId1"/></sheets></workbook>');
+  zip.file('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
+  zip.file('xl/worksheets/sheet1.xml', sheet);
+  zip.file('xl/styles.xml', styles);
+  const blob = await zip.generateAsync({type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'plan-' + mid + '.xlsx';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+function planPreview() {
+  const pl = S.pl;
+  if (!pl || !pl.parsed) return '';
+  const rows = pl.parsed.rows, mid = pl.month;
+  const exists = !!S.months[mid];
+  const old = exists ? (S.months[mid].plan || []) : [];
+  const sum = (arr, k) => arr.reduce((a, r) => a + num(r[k]), 0);
+  const keyOf = r => r.cab + '|' + r.art;
+  const oldKeys = new Set(old.map(keyOf)), newKeys = new Set(rows.map(keyOf));
+  const added = rows.filter(r => !oldKeys.has(keyOf(r))).map(r => r.art + ' (' + r.cab + ')');
+  const removed = old.filter(r => !newKeys.has(keyOf(r))).map(r => r.art + ' (' + r.cab + ')');
+  const look = costBuyLookup(mid);
+  const noCost = rows.filter(r => look(r.cab, r.art).cost == null && num(r.qty) > 0).map(r => r.art);
+  const noRoi = rows.filter(r => r.norm == null).length;
+  const cats = new Set(rows.map(r => r.cab + '|' + r.cat)).size, cabs = new Set(rows.map(r => r.cab)).size;
+  const list = (arr, n) => esc(arr.slice(0, n).join(', ')) + (arr.length > n ? ` и ещё ${arr.length - n}` : '');
+  return `<div class="msg info" style="margin-bottom:0">Файл «${esc(pl.name)}» прочитан.</div>
+    <div class="base">
+      <div><b>${rows.length}</b><span>артикулов</span></div>
+      <div><b>${cats} / ${cabs}</b><span>категорий / кабинетов</span></div>
+      <div><b>${R(sum(rows, 'qty'))} шт</b><span>план заказов</span></div>
+      <div><b>${MN(sum(rows, 'rub'))} ₽</b><span>план заказов${exists ? ', сейчас ' + MN(sum(old, 'rub')) + ' ₽' : ''}</span></div>
+    </div>
+    ${exists && added.length ? `<p class="hint">Новые позиции (${added.length}): ${list(added, 12)}</p>` : ''}
+    ${exists && removed.length ? `<p class="hint">Уйдут из плана (${removed.length}): ${list(removed, 12)}</p>` : ''}
+    ${noCost.length ? `<p class="hint">Пока нет себестоимости у ${noCost.length}: ${list(noCost, 10)}. Она подтянется из отчёта «Unit экономика», когда загрузите его за любой период, или впишите её в таблице ниже. До этого ЧП плана по ним 0.</p>` : ''}
+    ${noRoi ? `<p class="hint">У ${noRoi} строк не задана норма ROI, возьмётся норма категории.</p>` : ''}
+    ${pl.parsed.warn.length ? `<p class="hint">Замечания: ${esc(pl.parsed.warn.join('; '))}</p>` : ''}
+    <div class="bar">
+      <button type="button" class="btn primary" id="plSave">Сохранить план в ${monthLabel(mid).toLowerCase()}</button>
+      <button type="button" class="btn" id="plCancel">Отменить</button>
+      ${exists ? '<span class="hint">План месяца будет заменён целиком. Себестоимость, выкуп и цели категорий сохранятся. Загруженный факт не меняется.</span>' : '<span class="hint">Месяц будет создан.</span>'}
+    </div>`;
+}
+
+function renderPlan() {
+  const el = $('#tab-plan');
+  ensureDraft();
+  if (!S.pl) S.pl = {month: S.mid || nextMonthId(null)};
+  const msg = S.planMsg ? `<div class="msg ${S.planMsg.t}">${S.planMsg.html}</div>` : '';
+  const xl = `
+    <div class="card">
+      <h2 style="margin-top:0">План из Excel</h2>
+      <div class="bar" style="margin:0">
+        <label class="ctl" for="plMonth">Месяц</label><input type="month" id="plMonth" value="${S.pl.month}">
+        <label class="btn primary" for="plFile" style="display:inline-block">Загрузить план из Excel</label><input type="file" id="plFile" accept=".xlsx" hidden>
+        <button type="button" class="btn" id="plOut"${S.mid ? '' : ' disabled'}>Выгрузить ${S.mid ? monthLabel(S.mid).toLowerCase() : 'план'} в Excel</button>
+      </div>
+      <p class="hint" style="margin:8px 0 0">Колонки: ${PLAN_COLS.map(esc).join(' · ')}. Из цены, штук и рублей достаточно двух. ROI можно писать как 120% или 120. Себестоимость и выкуп подтянутся из прошлого плана и загруженных отчётов. Следующий месяц удобно делать так: выгрузить текущий в Excel, поправить, загрузить в новый месяц.</p>
+      ${planPreview()}
+    </div>`;
+  const tools = `
+    <div class="card" style="margin-top:10px">
+      <div class="bar" style="margin:0">
+        <label class="ctl" for="newMonth">Новый месяц без Excel</label><input type="month" id="newMonth" value="${nextMonthId(S.mid)}">
+        <button type="button" class="btn" id="mkCopy"${S.mid ? '' : ' disabled'}>Создать по образцу ${S.mid ? monthLabel(S.mid).toLowerCase() : ''}</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="expJson">Экспорт всех данных</button>
+        <label class="btn" for="impJson" style="display:inline-block">Импорт данных</label><input type="file" id="impJson" accept=".json,application/json" hidden>
+        ${Backend.backup ? '<button type="button" class="btn" id="bkDrive">Копия на Google Диск</button>' : ''}
+      </div>
+      <p class="hint" style="margin:8px 0 0">Экспорт и копия на Диск сохраняют все месяцы и весь факт одним JSON-файлом; импорт возвращает их обратно.</p>
+    </div>`;
+  if (!S.draft) { el.innerHTML = msg + xl + tools + '<div class="empty card" style="margin-top:10px"><b>Месяц не выбран</b>Загрузите план из Excel или импортируйте файл с данными.</div>'; return; }
+  const D = S.draft;
+  const pIn = (k, v, cls, lbl) => `<input class="${cls}" data-k="${k}" data-pct="1" value="${pctIn(v)}" aria-label="${lbl}">`;
+  const catRows = (D.categories || []).map((c, i) => `<tr>
+    <td>${esc(c.cab)}</td><td>${esc(c.cat)}</td>
+    <td>${pIn('c.' + i + '.min', c.min, 's', 'Порог ROI категории')}</td>
+    <td>${pIn('c.' + i + '.norm', c.norm, 's', 'Норма ROI категории')}</td>
+    <td>${pIn('c.' + i + '.st', c.st, 's', 'Сверх ROI категории')}</td>
+    <td><input class="w" data-k="c.${i}.target" value="${has(c.target) ? c.target : ''}" aria-label="Цель категории"></td>
+    <td>${pIn('c.' + i + '.buy', c.buy, 's', 'Выкуп категории')}</td>
+    <td>${pIn('c.' + i + '.cshare', c.cshare, 's', 'Себестоимость в цене')}</td>
+    <td style="text-align:left;color:var(--muted)">${esc(c.note || '')}</td></tr>`).join('');
+  const catOf = {};
+  (D.categories || []).forEach(c => { catOf[c.cab + '|' + c.cat] = c; });
+  const fb = {};
+  if (MD && MD.mid === S.mid) MD.rows.forEach(n => { fb[n.cab + '|' + n.art] = n; });
+  let last = '';
+  const artRows = (D.plan || []).map((r, i) => {
+    const g = r.cab + '|' + r.cat, c = catOf[g] || {};
+    const head = g !== last ? `<tr class="grp"><td colspan="11">${esc(r.cab)} · ${esc(r.cat)}</td></tr>` : '';
+    last = g;
+    const norm = has(r.norm) ? num(r.norm) : num(c.norm);
+    const f = fb[r.cab + '|' + r.art] || {};
+    const cost = has(r.cost) ? num(r.cost) : (f.planCost || 0), buy = has(r.buy) && !r.buyGuess ? num(r.buy) : (f.planBuy || num(r.buy));
+    const chp = num(r.qty) * buy * cost * norm;
+    return head + `<tr><td>${esc(r.art)}</td><td style="color:var(--muted)">${esc(r.cab)}</td>
+      <td><input class="w" data-k="p.${i}.price" value="${has(r.price) ? r.price : ''}" aria-label="Плановая цена"></td>
+      <td><input class="w" data-k="p.${i}.qty" value="${num(r.qty)}" aria-label="План шт"></td>
+      <td><input class="w" data-k="p.${i}.rub" value="${num(r.rub)}" aria-label="План рубли"></td>
+      <td>${pIn('p.' + i + '.min', r.min, 's', 'Пороговая ROI')}</td>
+      <td>${pIn('p.' + i + '.norm', r.norm, 's', 'Норм ROI')}</td>
+      <td>${pIn('p.' + i + '.st', r.st, 's', 'Сверх ROI')}</td>
+      <td><input class="w" data-k="p.${i}.cost" value="${has(r.cost) ? r.cost : ''}" placeholder="${!has(r.cost) && f.planCost ? Math.round(f.planCost) : ''}" title="${!has(r.cost) && f.planCost ? 'Из отчёта: ' + Math.round(f.planCost) + ' ₽' : ''}" aria-label="Себестоимость"${has(r.cost) ? '' : ' style="background:var(--warn-bg)"'}></td>
+      <td>${pIn('p.' + i + '.buy', r.buy, 's', 'Выкуп')}</td>
+      <td class="n" id="chp${i}">${R(chp)}</td></tr>`;
+  }).join('');
+  el.innerHTML = msg + xl + tools + `
+    <div class="bar" style="margin-top:14px">
+      <h2 style="margin:0">${monthLabel(S.mid)}</h2><span class="spacer"></span>
+      <span class="hint" id="dirtyNote">${S.dirty ? 'Есть несохранённые изменения' : 'Изменений нет'}</span>
+      <button type="button" class="btn" id="planUndo"${S.dirty ? '' : ' disabled'}>Отменить</button>
+      <button type="button" class="btn primary" id="planSave"${S.dirty ? '' : ' disabled'}>Сохранить план</button>
+    </div>
+    <h2>План по артикулам</h2>
+    <p class="hint">ROI = ЧП / себестоимость продаж. Пустой ROI у артикула берётся из категории. ЧП план = шт × выкуп × себестоимость × норм ROI. Пустая себестоимость (подсвечена) и выкуп берутся из последних загруженных отчётов.</p>
+    <div class="edbox"><table class="ed"><thead><tr><th>Артикул</th><th>Кабинет</th><th>Цена, ₽</th><th>План, шт</th><th>План, ₽</th><th>Порог ROI, %</th><th>Норм ROI, %</th><th>Сверх ROI, %</th><th>С/с, ₽/шт</th><th>Выкуп, %</th><th>ЧП план, ₽</th></tr></thead><tbody>${artRows}</tbody></table></div>
+    <h2>Категории</h2>
+    <p class="hint">ROI категории — значение по умолчанию для артикулов без своего. Цель категории в ₽ работает, только если по её артикулам нет плана (тогда ЧП план = цель × выкуп × доля себестоимости в цене × норма).</p>
+    <div class="edbox"><table class="ed"><thead><tr><th>Кабинет</th><th>Категория</th><th>Порог, %</th><th>Норма, %</th><th>Сверх, %</th><th>Цель, ₽/мес</th><th>Выкуп, %</th><th>С/с в цене, %</th><th style="text-align:left">Примечание</th></tr></thead><tbody>${catRows}</tbody></table></div>`;
+}
+
+function planSetDirty() {
+  S.dirty = true;
+  const n = $('#dirtyNote'); if (n) n.textContent = 'Есть несохранённые изменения';
+  const s = $('#planSave'), u = $('#planUndo'); if (s) s.disabled = false; if (u) u.disabled = false;
+}
+
+async function saveMonthDoc(id, doc, okText) {
+  try {
+    doc.month = id; doc.updatedAt = new Date().toISOString();
+    await Backend.saveMonth(id, doc);
+    S.months[id] = clone(doc);
+    S.planMsg = {t: 'ok', html: esc(okText)};
+    S.error = null;
+    pushHistory();
+    return true;
+  } catch (e) {
+    S.planMsg = {t: 'err', html: 'Не сохранилось: ' + esc(e.message) + '. Проверьте интернет и нажмите ещё раз.'};
+    return false;
+  }
+}
+
+async function handlePlanFile(file) {
+  S.pl = {month: ($('#plMonth') || {}).value || S.mid || nextMonthId(null), name: file.name};
+  S.planMsg = null;
+  try {
+    const rows = await readXlsx(file);
+    S.pl.parsed = parsePlan(rows);
+  } catch (e) {
+    S.pl.parsed = null;
+    S.planMsg = {t: 'err', html: 'План не прочитан: ' + esc(e.message)};
+  }
+  renderPlan();
+}
+
+/* ============ ЗАГРУЗКА ДАННЫХ ============ */
+const colIdx = s => s.split('').reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0) - 1;
+
+async function readXlsx(file) {
+  if (typeof JSZip === 'undefined') throw new Error('Не загрузилась библиотека чтения xlsx. Проверьте интернет и обновите страницу.');
+  const zip = await JSZip.loadAsync(file);
+  const names = Object.keys(zip.files);
+  let sheet = names.find(n => /^xl\/worksheets\/sheet1\.xml$/i.test(n)) || names.find(n => /^xl\/worksheets\/[^/]+\.xml$/i.test(n));
+  if (!sheet) throw new Error('В файле нет листа с данными');
+  const parser = new DOMParser();
+  let ss = [];
+  const ssName = names.find(n => /^xl\/sharedStrings\.xml$/i.test(n));
+  if (ssName) {
+    const d = parser.parseFromString(await zip.file(ssName).async('string'), 'application/xml');
+    ss = Array.from(d.getElementsByTagNameNS('*', 'si')).map(si => Array.from(si.getElementsByTagNameNS('*', 't')).map(t => t.textContent).join(''));
+  }
+  const doc = parser.parseFromString(await zip.file(sheet).async('string'), 'application/xml');
+  if (doc.getElementsByTagName('parsererror').length) throw new Error('Файл повреждён: не читается лист');
+  const rows = [];
+  for (const row of Array.from(doc.getElementsByTagNameNS('*', 'row'))) {
+    const out = [];
+    let i = 0;
+    for (const c of Array.from(row.children)) {
+      if (c.localName !== 'c') continue;
+      const m = /^([A-Z]+)(\d+)$/.exec(c.getAttribute('r') || '');
+      if (m) i = colIdx(m[1]);
+      const t = c.getAttribute('t');
+      let v = null;
+      const vEl = Array.from(c.children).find(x => x.localName === 'v');
+      const isEl = Array.from(c.children).find(x => x.localName === 'is');
+      if (isEl) v = isEl.textContent;
+      else if (vEl) {
+        v = vEl.textContent;
+        if (t === 's') v = ss[+v];
+        else if (t === 'b') v = v === '1';
+        else if (t !== 'str' && t !== 'inlineStr' && t !== 'e') { const n = Number(v); if (!isNaN(n)) v = n; }
+      }
+      out[i] = v;
+      i++;
+    }
+    rows.push(out);
+  }
+  return rows;
+}
+
+function detect(rows, fileName) {
+  const head = (rows[0] || []).map(h => String(h ?? '').trim());
+  const find = name => head.findIndex(h => h.toLowerCase() === name.toLowerCase());
+  const artI = head.findIndex(h => /ртикул/i.test(h));
+  if (artI < 0) throw new Error(`«${fileName}»: нет столбца с артикулом`);
+  if (find('Сумма заказов') >= 0) {
+    const need = ['Заказано', 'Сумма заказов', 'Заказано (завершенные)', 'Выкуплено из заказанного (завершенные)'];
+    const idx = need.map(find);
+    const miss = need.filter((n, k) => idx[k] < 0);
+    if (miss.length) throw new Error(`«${fileName}»: нет столбцов ${miss.join(', ')}`);
+    const o = {};
+    let sum = 0, cnt = 0;
+    rows.slice(1).forEach(r => {
+      const a = r[artI] == null ? '' : String(r[artI]).trim(); if (!a) return;
+      const v = idx.map(k => num(r[k]));
+      if (!v.some(x => x)) return;
+      const cur = o[a] || [0, 0, 0, 0];
+      o[a] = cur.map((x, k) => Math.round((x + v[k]) * 100) / 100);
+      sum += v[1]; cnt++;
+    });
+    return {kind: 'o', name: fileName, data: o, rows: cnt, sum, label: 'Общий отчет (заказы)'};
+  }
+  if (find('Прибыль, руб') >= 0) {
+    const need = ['Сумма продаж, руб', 'Продано, шт', 'Себестоимость, руб', 'Прибыль, руб', 'Маржинальная прибыль, руб'];
+    const idx = need.map(find);
+    const miss = need.filter((n, k) => idx[k] < 0);
+    if (miss.length) throw new Error(`«${fileName}»: нет столбцов ${miss.join(', ')}`);
+    const p = {};
+    let sum = 0, cnt = 0;
+    rows.slice(1).forEach(r => {
+      const a = r[artI] == null ? '' : String(r[artI]).trim(); if (!a) return;
+      const v = idx.map(k => num(r[k]));
+      if (!v.some(x => x)) return;
+      const cur = p[a] || [0, 0, 0, 0, 0];
+      p[a] = cur.map((x, k) => Math.round((x + v[k]) * 100) / 100);
+      sum += v[3]; cnt++;
+    });
+    return {kind: 'p', name: fileName, data: p, rows: cnt, sum, label: 'Unit экономика (P&L)'};
+  }
+  throw new Error(`«${fileName}»: не похоже ни на «Общий отчет», ни на «Unit экономику»`);
+}
+
+async function handleFiles(list) {
+  const files = Array.from(list || []);
+  if (!files.length) return;
+  S.up.msg = {t: 'info', html: 'Читаю файлы…'};
+  renderUpload();
+  const errs = [];
+  for (const f of files) {
+    try {
+      if (/\.json$/i.test(f.name)) { errs.push(`«${f.name}»: это файл экспорта, его импортируют на вкладке «План месяца»`); continue; }
+      const rows = await readXlsx(f);
+      const d = detect(rows, f.name);
+      S.up.parsed[d.kind] = d;
+    } catch (e) { errs.push(e.message); }
+  }
+  S.up.msg = errs.length ? {t: 'err', html: errs.map(esc).join('<br>')} : null;
+  renderUpload();
+}
+
+function renderUpload() {
+  const el = $('#tab-upload');
+  if (!MD) return noMonth(el);
+  const md = MD;
+  if (!S.up.period || !md.per.some(p => p.id === S.up.period)) {
+    const firstEmpty = md.per.find(p => !md.F[p.id]);
+    S.up.period = (firstEmpty || md.per[md.per.length - 1]).id;
+  }
+  const per = md.per.find(p => p.id === S.up.period);
+  const exists = !!md.F[per.id];
+  const planArts = new Set(md.rows.map(r => r.art));
+  const card = d => {
+    if (!d) return '';
+    const keys = Object.keys(d.data);
+    const hit = keys.filter(k => planArts.has(k)).length;
+    return `<div class="card"><b>${esc(d.label)}</b><div class="hint">${esc(d.name)}</div>
+      <div class="base"><div><b>${R(d.rows)}</b><span>строк с данными</span></div>
+      <div><b>${MN(d.sum)} ₽</b><span>${d.kind === 'o' ? 'сумма заказов' : 'чистая прибыль'}</span></div>
+      <div><b>${hit} из ${planArts.size}</b><span>артикулов плана найдено</span></div></div></div>`;
+  };
+  const o = S.up.parsed.o, p = S.up.parsed.p;
+  const missing = o ? [...planArts].filter(a => !(a in o.data) && !(p && a in p.data)) : [];
+  const canSave = o || p;
+  const loadedList = md.per.filter(x => md.F[x.id]).map(x => {
+    const f = md.F[x.id];
+    const sumO = Object.values(f.o || {}).reduce((s, v) => s + (v[1] || 0), 0);
+    const sumP = Object.values(f.p || {}).reduce((s, v) => s + (v[3] || 0), 0);
+    const conf = S.up.confirmDel === x.id;
+    return `<div class="li"><b>${x.label}</b><span class="grow hint">заказы ${MN(sumO)} ₽ · ЧП ${MN(sumP)} ₽${f.uploadedAt ? ' · загружено ' + new Date(f.uploadedAt).toLocaleString('ru-RU', {day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit'}) : ''}</span>
+      <button type="button" class="btn danger" data-del="${x.id}">${conf ? 'Точно удалить?' : 'Удалить'}</button></div>`;
+  }).join('') || '<span class="hint">Пока ничего не загружено.</span>';
+  el.innerHTML = `
+    <div class="bar">
+      <label class="ctl" for="upPeriod">Период</label>
+      <select id="upPeriod">${md.per.map(x => `<option value="${x.id}"${x.id === per.id ? ' selected' : ''}>${x.label}${md.F[x.id] ? ' — загружен' : ''}</option>`).join('')}</select>
+      <span class="hint">${monthLabel(md.mid)}</span>
+    </div>
+    <label class="drop" id="drop" for="upFiles">
+      <b>Перетащите сюда две выгрузки за период</b><br>
+      <span class="hint">«Общий отчет» (заказы) и «Unit экономика» (P&L) в формате .xlsx, можно сразу оба. Файлы читаются в браузере.</span>
+    </label>
+    <input type="file" id="upFiles" accept=".xlsx" multiple hidden>
+    ${S.up.msg ? `<div class="msg ${S.up.msg.t}">${S.up.msg.html}</div>` : ''}
+    <div class="files">${card(o)}${card(p)}</div>
+    ${o && missing.length ? `<p class="hint">Нет в выгрузке (${missing.length}): ${esc(missing.slice(0, 15).join(', '))}${missing.length > 15 ? '…' : ''}</p>` : ''}
+    ${canSave ? `<div class="bar" style="margin-top:12px">
+      <button type="button" class="btn primary" id="upSave">${exists ? 'Заменить данные' : 'Сохранить'} за ${per.label}</button>
+      <button type="button" class="btn" id="upClear">Очистить</button>
+      ${exists ? '<span class="hint">За этот период данные уже есть, они будут заменены' + (!o || !p ? ' (файл, который вы не загрузили, останется прежним)' : '') + '.</span>' : (!o || !p ? `<span class="hint">Нет файла «${!o ? 'Общий отчет' : 'Unit экономика'}»: можно сохранить сейчас и добавить его позже.</span>` : '')}
+    </div>` : ''}
+    <h2>Загружено за ${monthLabel(md.mid).toLowerCase()}</h2>
+    <div class="list">${loadedList}</div>`;
+}
+
+async function saveUpload() {
+  const md = MD, per = md.per.find(p => p.id === S.up.period);
+  const id = md.mid + '_' + per.id;
+  const prev = S.facts[id] || {};
+  const doc = {month: md.mid, period: per.id, from: per.from, to: per.to,
+    o: S.up.parsed.o ? S.up.parsed.o.data : (prev.o || {}),
+    p: S.up.parsed.p ? S.up.parsed.p.data : (prev.p || {}),
+    files: [S.up.parsed.o ? S.up.parsed.o.name : (prev.files || [])[0], S.up.parsed.p ? S.up.parsed.p.name : (prev.files || [])[1]].filter(Boolean),
+    uploadedAt: new Date().toISOString()};
+  const btn = $('#upSave'); if (btn) { btn.disabled = true; btn.textContent = 'Сохраняю…'; }
+  try {
+    await Backend.saveFact(id, doc);
+    S.facts[id] = doc;
+    S.up.parsed = {};
+    S.up.msg = {t: 'ok', html: `Сохранено: ${per.label}. Трекер уже пересчитан.`};
+    recompute(); pushHistory();
+  } catch (e) {
+    S.up.msg = {t: 'err', html: 'Не сохранилось: ' + esc(e.message) + '. Проверьте интернет и нажмите ещё раз.'};
+  }
+  renderAll();
+}
+
+/* ============ экспорт / импорт ============ */
+function exportJson() {
+  const data = {app: 'ozon-plan', version: 1, exportedAt: new Date().toISOString(), months: S.months, facts: S.facts};
+  const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ozon-plan-' + new Date().toISOString().slice(0, 10) + '.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+async function importJson(file) {
+  try {
+    const data = JSON.parse(await file.text());
+    if (!data || typeof data !== 'object' || (!data.months && !data.facts)) throw new Error('в файле нет месяцев и факта');
+    S.planMsg = {t: 'info', html: 'Импортирую…'}; renderPlan();
+    await Backend.importAll(data);
+    Object.assign(S.months, data.months || {});
+    Object.assign(S.facts, data.facts || {});
+    const ids = Object.keys(data.months || {}).sort();
+    if (ids.length) S.mid = ids[ids.length - 1];
+    S.dirty = false; S.draft = null;
+    S.planMsg = {t: 'ok', html: `Импортировано: месяцев ${Object.keys(data.months || {}).length}, периодов факта ${Object.keys(data.facts || {}).length}.`};
+    pushHistory();
+  } catch (e) {
+    S.planMsg = {t: 'err', html: 'Не удалось импортировать: ' + esc(e.message)};
+  }
+  renderAll();
+}
+
+/* ============ события ============ */
+document.addEventListener('click', async e => {
+  const b = e.target.closest('button, tr[data-cat]');
+  if (!b) return;
+  if (b.matches('#tabs button')) { S.tab = b.dataset.tab; pref.set('tab', S.tab); S.planMsg = null; S.up.msg = null; S.up.confirmDel = null; renderAll(); return; }
+  if (b.matches('#modeSeg button')) { S.mode = b.dataset.mode; pref.set('mode', S.mode); S.sim.sc = null; renderAll(); return; }
+  if (b.dataset.scope) { S.scope = b.dataset.scope; renderTracker(); return; }
+  if (b.matches('tr[data-cat]')) { const k = b.dataset.cat; S.open.has(k) ? S.open.delete(k) : S.open.add(k); pref.set('open', [...S.open]); renderTracker(); return; }
+  if (b.id === 'expAll') { MD.cats.forEach(c => S.open.add(c.key)); pref.set('open', [...S.open]); renderTracker(); return; }
+  if (b.id === 'colAll') { S.open.clear(); pref.set('open', []); renderTracker(); return; }
+  if (b.id === 'simReset') { S.sim.sc = null; renderSim(); return; }
+  if (b.id === 'planSave') {
+    b.disabled = true; b.textContent = 'Сохраняю…';
+    if (await saveMonthDoc(S.mid, S.draft, 'План сохранён.')) { S.dirty = false; }
+    renderAll(); return;
+  }
+  if (b.id === 'planUndo') { S.dirty = false; S.draft = null; S.planMsg = null; renderPlan(); return; }
+  if (b.id === 'plCancel') { S.pl = {month: S.pl ? S.pl.month : S.mid}; S.planMsg = null; renderPlan(); return; }
+  if (b.id === 'plOut') {
+    try { await exportPlanXlsx(S.mid); } catch (err) { S.planMsg = {t: 'err', html: 'Не удалось выгрузить: ' + esc(err.message)}; renderPlan(); }
+    return;
+  }
+  if (b.id === 'plSave') {
+    const mid = S.pl.month;
+    if (!/^\d{4}-\d{2}$/.test(mid)) { S.planMsg = {t: 'err', html: 'Выберите месяц.'}; renderPlan(); return; }
+    b.disabled = true; b.textContent = 'Сохраняю…';
+    const doc = buildPlanDoc(S.pl.parsed, mid);
+    if (await saveMonthDoc(mid, doc, `План ${monthLabel(mid).toLowerCase()} сохранён: ${doc.plan.length} артикулов.`)) {
+      S.mid = mid; pref.set('mid', mid); S.dirty = false; S.draft = null; S.pl = {month: mid};
+    }
+    renderAll(); return;
+  }
+  if (b.id === 'mkCopy') {
+    const id = $('#newMonth').value;
+    if (!/^\d{4}-\d{2}$/.test(id)) { S.planMsg = {t: 'err', html: 'Выберите месяц.'}; renderPlan(); return; }
+    if (S.months[id]) { S.planMsg = {t: 'err', html: `${monthLabel(id)} уже есть. Выберите его в списке месяцев сверху.`}; renderPlan(); return; }
+    const doc = clone(S.months[S.mid]);
+    delete doc.updatedAt; doc.copiedFrom = S.mid;
+    if (await saveMonthDoc(id, doc, `${monthLabel(id)} создан.`)) { S.mid = id; pref.set('mid', id); S.dirty = false; S.draft = null; }
+    renderAll(); return;
+  }
+  if (b.id === 'expJson') { exportJson(); return; }
+  if (b.id === 'bkDrive') {
+    b.disabled = true; b.textContent = 'Сохраняю копию…';
+    try { const url = await Backend.backup(); S.planMsg = {t: 'ok', html: `Копия сохранена на Google Диск: <a href="${esc(url)}" target="_blank" rel="noopener">открыть файл</a>`}; }
+    catch (err) { S.planMsg = {t: 'err', html: 'Копия не сохранилась: ' + esc(err.message)}; }
+    renderPlan(); return;
+  }
+  if (b.id === 'upSave') { saveUpload(); return; }
+  if (b.id === 'upClear') { S.up.parsed = {}; S.up.msg = null; renderUpload(); return; }
+  if (b.dataset.del) {
+    const pid = b.dataset.del;
+    if (S.up.confirmDel !== pid) { S.up.confirmDel = pid; renderUpload(); return; }
+    S.up.confirmDel = null;
+    const id = MD.mid + '_' + pid;
+    try { await Backend.deleteFact(id); delete S.facts[id]; S.up.msg = {t: 'ok', html: 'Данные периода удалены.'}; pushHistory(); }
+    catch (err) { S.up.msg = {t: 'err', html: 'Не удалилось: ' + esc(err.message)}; }
+    renderAll(); return;
+  }
+});
+
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.id === 'monthSel') { S.mid = t.value; pref.set('mid', S.mid); S.scope = 'month'; S.sim.sc = null; S.up.parsed = {}; if (!S.pl || !S.pl.parsed) S.pl = {month: S.mid}; renderAll(); return; }
+  if (t.id === 'simSel') { S.sim.key = t.value; S.sim.sc = null; renderSim(); return; }
+  if (t.id === 'upPeriod') { S.up.period = t.value; renderUpload(); return; }
+  if (t.id === 'upFiles') { handleFiles(t.files); t.value = ''; return; }
+  if (t.id === 'impJson') { if (t.files[0]) importJson(t.files[0]); t.value = ''; return; }
+  if (t.id === 'plFile') { if (t.files[0]) handlePlanFile(t.files[0]); t.value = ''; return; }
+  if (t.id === 'plMonth') { S.pl = Object.assign(S.pl || {}, {month: t.value}); renderPlan(); return; }
+});
+
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.id === 'q') { S.q = t.value; const pos = t.selectionStart; renderTracker(); const n = $('#q'); n.focus(); n.setSelectionRange(pos, pos); return; }
+  if (t.dataset.f && t.dataset.i != null && S.sim.sc) {
+    const s = S.sim.sc[+t.dataset.i];
+    if (t.dataset.f === 'name') { s.name = t.value; simUpdate(); return; }
+    const v = num(t.value);
+    if (t.dataset.f === 'qty') s.qty = Math.max(0, v); else s.roi = Math.max(0, v) / 100;
+    const i = t.dataset.i;
+    if (t.type === 'range') { const n = $(t.dataset.f === 'qty' ? '#scq' + i : '#scr' + i); if (n) n.value = Math.round(v); }
+    else { const r = $(t.dataset.f === 'qty' ? '#scqr' + i : '#scrr' + i); if (r) r.value = Math.round(v); }
+    simUpdate(); return;
+  }
+  if (t.dataset.k && S.draft) {
+    const [kind, idx, field] = t.dataset.k.split('.');
+    const arr = kind === 'c' ? S.draft.categories : S.draft.plan;
+    const raw = t.value.trim();
+    let v = raw === '' ? null : num(raw);
+    if (v != null && t.dataset.pct) v = v / 100;
+    arr[+idx][field] = v;
+    if (kind === 'p') {
+      const r = S.draft.plan[+idx];
+      const c = (S.draft.categories || []).find(x => x.cab === r.cab && x.cat === r.cat) || {};
+      const norm = r.norm != null && r.norm !== '' ? num(r.norm) : num(c.norm);
+      const cell = $('#chp' + idx); if (cell) cell.textContent = R(num(r.qty) * num(r.buy) * num(r.cost) * norm);
+    }
+    planSetDirty();
+  }
+});
+
+const dropOn = on => e => { const d = e.target.closest && e.target.closest('#drop'); if (!d) return; e.preventDefault(); d.classList.toggle('over', on); };
+document.addEventListener('dragover', dropOn(true));
+document.addEventListener('dragleave', dropOn(false));
+document.addEventListener('drop', e => { const d = e.target.closest && e.target.closest('#drop'); if (!d) return; e.preventDefault(); d.classList.remove('over'); handleFiles(e.dataTransfer.files); });
+window.addEventListener('beforeunload', e => { if (S.dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+/* ============ старт ============ */
+(async function start() {
+  try {
+    const data = await Backend.load();
+    S.months = data.months || {}; S.facts = data.facts || {};
+    S.loaded = true;
+  } catch (e) {
+    S.loaded = true; S.error = 'Не удалось загрузить данные: ' + e.message;
+  }
+  if (!Object.keys(S.months).length && S.tab !== 'plan') S.tab = 'plan';
+  renderAll();
+})();
+</script>
+</body>
+</html>

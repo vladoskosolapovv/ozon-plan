@@ -17,7 +17,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      DEPLOYMENT_ID: ''  # заполняется после первого развёртывания
+      DEPLOYMENT_ID: AKfycbxe9JT1edW3Lj3BR2Q8YMGTw0MKBDmkRyKSr26QPWnMXpa1qtQ2Gq6VwDFjA-aXfjzCVQ
     steps:
       - uses: actions/checkout@v4
 

@@ -9,10 +9,8 @@
 ## Настройка (один раз)
 
 1. Apps Script API: https://script.google.com/home/usersettings → включить.
-2. В `.clasp.json` — Script ID проекта (Настройки проекта → Идентификатор скрипта).
-3. GitHub → Settings → Secrets and variables → Actions:
-   - Secret `CLASPRC_JSON` — содержимое файла `~/.clasprc.json` после `npm i -g @google/clasp@2.4.2` и `clasp login`.
-   - Variable `DEPLOYMENT_ID` — ID веб-приложения (Развернуть → Управление развертываниями).
+2. `.clasp.json` — Script ID проекта; `DEPLOYMENT_ID` веб-приложения — в `.github/workflows/deploy.yml`.
+3. GitHub → Settings → Secrets and variables → Actions → секрет `CLASPRC_JSON`: содержимое `~/.clasprc.json` после `npm i -g @google/clasp@2.4.2` и `clasp login` (на Windows: `clasp.cmd login`).
 
 ## Откат
 

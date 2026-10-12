@@ -1381,17 +1381,43 @@ document.addEventListener('drop', e => { const d = e.target.closest && e.target.
 window.addEventListener('beforeunload', e => { if (S.dirty) { e.preventDefault(); e.returnValue = ''; } });
 
 /* ============ старт ============ */
-(async function start() {
+function showLoadProblem(text) {
+  const el = $('#status');
+  el.innerHTML = `<div class="msg err" style="width:100%">${text}
+    <div class="bar" style="margin:10px 0 0"><button type="button" class="btn" id="retryLoad">Повторить</button></div></div>`;
+}
+
+async function start() {
+  setStatus();
+  const t0 = Date.now();
+  let timer;
+  const timeout = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('timeout')), 20000); });
   try {
-    const data = await Backend.load();
+    const data = await Promise.race([Backend.load(), timeout]);
+    clearTimeout(timer);
     S.months = data.months || {}; S.facts = data.facts || {};
-    S.loaded = true;
+    S.loaded = true; S.error = null;
   } catch (e) {
-    S.loaded = true; S.error = 'Не удалось загрузить данные: ' + e.message;
+    clearTimeout(timer);
+    if (e.message === 'timeout') {
+      showLoadProblem(`Google-таблица не ответила за 20 секунд.<br>
+        Чаще всего так бывает, когда в браузере выполнен вход в несколько Google-аккаунтов. Откройте сайт в окне инкогнито (Ctrl+Shift+N) и войдите только в аккаунт, которому принадлежит таблица, или выйдите из остальных аккаунтов.<br>
+        Если вход один, нажмите «Повторить».`);
+      return;
+    }
+    const m = String(e.message || e);
+    const auth = /authoriz|авториз|permission|разрешени|PERMISSION_DENIED|401/i.test(m);
+    showLoadProblem(auth
+      ? `Нет доступа к таблице: ${esc(m)}.<br>Откройте сайт заново и в окне Google разрешите доступ ко всем пунктам (таблицы и Диск). Если в браузере несколько аккаунтов, откройте сайт в окне инкогнито.`
+      : `Не удалось загрузить данные: ${esc(m)}`);
+    return;
   }
   if (!Object.keys(S.months).length && S.tab !== 'plan') S.tab = 'plan';
   renderAll();
-})();
+  console.log('Данные загружены за', Date.now() - t0, 'мс');
+}
+document.addEventListener('click', e => { if (e.target.id === 'retryLoad') { e.stopPropagation(); start(); } }, true);
+start();
 </script>
 </body>
 </html>

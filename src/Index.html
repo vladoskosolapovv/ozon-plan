@@ -14,18 +14,7 @@ window.addEventListener('error', function (e) {
 });
 document.addEventListener('DOMContentLoaded', function () {
   var el = document.getElementById('status');
-  if (el && window.__earlyErrors.length) {
-    var big = '', ss = document.getElementsByTagName('script');
-    for (var i = 0; i < ss.length; i++) if (!ss[i].src && ss[i].textContent.length > big.length) big = ss[i].textContent;
-    var lines = big.split('\n'), odd = [];
-    for (var k = 0; k < lines.length; k++) {
-      var n = (lines[k].match(/`/g) || []).length;
-      if (n % 2) odd.push((k + 1) + ': ' + lines[k].trim().slice(0, 70));
-    }
-    el.innerHTML = '<div class="msg err" style="width:100%">Ошибка на странице: ' + window.__earlyErrors.join('; ').replace(/[&<>]/g, '') +
-      '<pre id="diag" style="white-space:pre-wrap;font-size:11px;line-height:1.3;margin:8px 0 0">len=' + big.length + ' lines=' + lines.length + '\n' +
-      odd.join('\n').replace(/[&<>]/g, function (c) { return c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;'; }) + '</pre></div>';
-  }
+  if (el && window.__earlyErrors.length) el.innerHTML = '<div class="msg err" style="width:100%">Ошибка на странице: ' + window.__earlyErrors.join('; ').replace(/[&<>]/g, '') + '</div>';
 });
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -930,6 +919,8 @@ function buildPlanDoc(parsed, mid) {
 }
 
 /* --- выгрузка плана в Excel (xlsx собирается в браузере) --- */
+// Apps Script вырезает «//» из шаблонных строк в обратных кавычках, поэтому адреса собираем из частей в обычных кавычках
+const NS_MAIN = 'http:/' + '/schemas.openxmlformats.org/spreadsheetml/2006/main';
 const XMLH = '<' + '?xml version="1.0" encoding="UTF-8" standalone="yes"?' + '>';
 async function exportPlanXlsx(mid) {
   const D = S.draftOf === mid && S.draft ? S.draft : S.months[mid];
@@ -952,8 +943,8 @@ async function exportPlanXlsx(mid) {
     rowsXml += `<row r="${n}">${[r.cab, r.cat, r.art].map((v, i) => cell(i, n, v, 0)).join('')}${cell(3, n, price, 2)}${cell(4, n, num(r.qty) || null, 2)}${cell(5, n, num(r.rub) || null, 2)}${['min', 'norm', 'st'].map((key, i) => cell(6 + i, n, th(key), 3)).join('')}</row>`;
   });
   const widths = [13, 24, 30, 14, 13, 16, 12, 12, 12];
-  const sheet = `${XMLH}<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${rowsXml}</sheetData></worksheet>`;
-  const styles = `${XMLH}<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="9" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  const sheet = `${XMLH}<worksheet xmlns="${NS_MAIN}"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${rowsXml}</sheetData></worksheet>`;
+  const styles = `${XMLH}<styleSheet xmlns="${NS_MAIN}"><fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="9" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
   await ensureJSZip();
   const zip = new JSZip();
   zip.file('[Content_Types].xml', XMLH + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');

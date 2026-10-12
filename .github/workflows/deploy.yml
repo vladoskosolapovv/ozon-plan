@@ -7,6 +7,7 @@ on:
       - 'src/**'
       - '.clasp.json'
       - '.github/workflows/deploy.yml'
+      - 'tools/**'
   workflow_dispatch:
 
 concurrency:
@@ -24,6 +25,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+
+      - name: Проверить код страницы
+        run: |
+          npm install --no-save acorn@8.12.1
+          node tools/check-gas.js src/Index.html
 
       - name: Установить clasp
         run: npm install -g @google/clasp@2.4.2

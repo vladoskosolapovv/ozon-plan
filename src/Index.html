@@ -6,7 +6,6 @@
 <title>План продаж Ozon</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Unbounded:wght@500;600&display=swap">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
 /* Layout: sticky header with tabs, one working area per tab; tables scroll inside their own box. */
 :root{
@@ -198,6 +197,36 @@ textarea{width:100%;min-height:120px;font-family:ui-monospace,Menlo,Consolas,mon
 </div>
 
 <script>
+/* ============ ошибки страницы — показываем, а не молчим ============ */
+function showFatal(text) {
+  const el = document.getElementById('status');
+  if (el) el.innerHTML = '<div class="msg err" style="width:100%">Ошибка на странице: ' + String(text).replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c])) +
+    '<br>Пришлите этот текст разработчику.</div>';
+}
+window.addEventListener('error', e => showFatal(e.message + (e.lineno ? ' (строка ' + e.lineno + ')' : '')));
+window.addEventListener('unhandledrejection', e => showFatal(e.reason && e.reason.message || e.reason));
+
+/* ============ библиотека для xlsx: грузим только когда нужна ============ */
+let jszipPromise = null;
+function ensureJSZip() {
+  if (typeof JSZip !== 'undefined') return Promise.resolve();
+  if (jszipPromise) return jszipPromise;
+  const urls = ['https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+    'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js',
+    'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js'];
+  const load = url => new Promise((res, rej) => {
+    const sc = document.createElement('script');
+    const t = setTimeout(() => { sc.remove(); rej(new Error('timeout')); }, 8000);
+    sc.src = url; sc.async = true;
+    sc.onload = () => { clearTimeout(t); typeof JSZip !== 'undefined' ? res() : rej(new Error('empty')); };
+    sc.onerror = () => { clearTimeout(t); sc.remove(); rej(new Error('blocked')); };
+    document.head.appendChild(sc);
+  });
+  jszipPromise = urls.reduce((p, u) => p.catch(() => load(u)), Promise.reject(new Error('start')))
+    .catch(() => { jszipPromise = null; throw new Error('Не загрузилась библиотека чтения Excel. Проверьте интернет и попробуйте ещё раз.'); });
+  return jszipPromise;
+}
+
 /* ============ утилиты ============ */
 const $ = s => document.querySelector(s);
 const NF = new Intl.NumberFormat('ru-RU', {maximumFractionDigits: 0});
@@ -241,6 +270,7 @@ const Backend = (() => {
       google.script.run.withSuccessHandler(res).withFailureHandler(e => rej(new Error(e && e.message || String(e))))[fn](...args));
     return {
       kind: 'gas',
+      ping: () => call('ping'),
       load: async () => JSON.parse(await call('loadAll')),
       saveMonth: (id, doc) => call('saveMonth', id, JSON.stringify(doc)),
       deleteMonth: id => call('deleteMonth', id),
@@ -256,6 +286,7 @@ const Backend = (() => {
   const write = d => { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) { throw new Error('Браузер не дал сохранить данные (' + e.message + '). Сделайте экспорт в файл.'); } };
   return {
     kind: 'local',
+    ping: async () => 'ok',
     load: async () => read(),
     saveMonth: async (id, doc) => { const d = read(); d.months[id] = doc; write(d); },
     deleteMonth: async id => { const d = read(); delete d.months[id]; write(d); },
@@ -898,6 +929,7 @@ async function exportPlanXlsx(mid) {
   const widths = [13, 24, 30, 14, 13, 16, 12, 12, 12];
   const sheet = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${rowsXml}</sheetData></worksheet>`;
   const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="9" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  await ensureJSZip();
   const zip = new JSZip();
   zip.file('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
   zip.file('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
@@ -1065,7 +1097,7 @@ async function handlePlanFile(file) {
 const colIdx = s => s.split('').reduce((a, ch) => a * 26 + ch.charCodeAt(0) - 64, 0) - 1;
 
 async function readXlsx(file) {
-  if (typeof JSZip === 'undefined') throw new Error('Не загрузилась библиотека чтения xlsx. Проверьте интернет и обновите страницу.');
+  await ensureJSZip();
   const zip = await JSZip.loadAsync(file);
   const names = Object.keys(zip.files);
   let sheet = names.find(n => /^xl\/worksheets\/sheet1\.xml$/i.test(n)) || names.find(n => /^xl\/worksheets\/[^/]+\.xml$/i.test(n));
@@ -1387,31 +1419,46 @@ function showLoadProblem(text) {
     <div class="bar" style="margin:10px 0 0"><button type="button" class="btn" id="retryLoad">Повторить</button></div></div>`;
 }
 
+const withTimeout = (p, ms) => {
+  let t;
+  return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(new Error('timeout')), ms); })]).finally(() => clearTimeout(t));
+};
+
 async function start() {
-  setStatus();
+  S.loaded = false; S.error = null;
   const t0 = Date.now();
-  let timer;
-  const timeout = new Promise((_, rej) => { timer = setTimeout(() => rej(new Error('timeout')), 20000); });
+  let stage = 'Проверяю связь с Google-таблицей';
+  const tick = setInterval(() => {
+    if (S.loaded) return;
+    $('#status').innerHTML = `<span class="pill"><span class="dot"></span>${stage}… ${Math.round((Date.now() - t0) / 1000)} с</span>`;
+  }, 500);
   try {
-    const data = await Promise.race([Backend.load(), timeout]);
-    clearTimeout(timer);
-    S.months = data.months || {}; S.facts = data.facts || {};
-    S.loaded = true; S.error = null;
-  } catch (e) {
-    clearTimeout(timer);
-    if (e.message === 'timeout') {
-      showLoadProblem(`Google-таблица не ответила за 20 секунд.<br>
-        Чаще всего так бывает, когда в браузере выполнен вход в несколько Google-аккаунтов. Откройте сайт в окне инкогнито (Ctrl+Shift+N) и войдите только в аккаунт, которому принадлежит таблица, или выйдите из остальных аккаунтов.<br>
-        Если вход один, нажмите «Повторить».`);
+    try { await withTimeout(Backend.ping(), 15000); }
+    catch (e) {
+      clearInterval(tick);
+      if (e.message === 'timeout') {
+        showLoadProblem(`Google не отвечает на запросы страницы (15 секунд без ответа).<br>
+          Почти всегда причина — вход в несколько Google-аккаунтов в этом браузере. Откройте сайт в окне инкогнито (Ctrl+Shift+N) или в отдельном профиле Chrome, где вход только в аккаунт владельца таблицы.`);
+      } else {
+        const m = String(e.message || e);
+        showLoadProblem(/authoriz|авториз|permission|разрешени|PERMISSION_DENIED|401/i.test(m)
+          ? `Нет доступа: ${esc(m)}.<br>Откройте сайт заново и в окне Google разрешите все пункты доступа. Если в браузере несколько аккаунтов, откройте сайт в окне инкогнито.`
+          : `Сервер ответил ошибкой: ${esc(m)}`);
+      }
       return;
     }
-    const m = String(e.message || e);
-    const auth = /authoriz|авториз|permission|разрешени|PERMISSION_DENIED|401/i.test(m);
-    showLoadProblem(auth
-      ? `Нет доступа к таблице: ${esc(m)}.<br>Откройте сайт заново и в окне Google разрешите доступ ко всем пунктам (таблицы и Диск). Если в браузере несколько аккаунтов, откройте сайт в окне инкогнито.`
-      : `Не удалось загрузить данные: ${esc(m)}`);
+    stage = 'Загружаю данные из таблицы';
+    const data = await withTimeout(Backend.load(), 60000);
+    S.months = data.months || {}; S.facts = data.facts || {};
+    S.loaded = true;
+  } catch (e) {
+    clearInterval(tick);
+    showLoadProblem(e.message === 'timeout'
+      ? 'Связь с таблицей есть, но данные не загрузились за минуту. Нажмите «Повторить»; если повторится, пришлите скрин.'
+      : `Не удалось загрузить данные: ${esc(String(e.message || e))}`);
     return;
   }
+  clearInterval(tick);
   if (!Object.keys(S.months).length && S.tab !== 'plan') S.tab = 'plan';
   renderAll();
   console.log('Данные загружены за', Date.now() - t0, 'мс');

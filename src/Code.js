@@ -88,6 +88,10 @@ function upsert_(s, id, meta, json, jsonCol) {
 
 /* ---------- API для сайта ---------- */
 
+function ping() {
+  return 'ok';
+}
+
 function loadAll() {
   const out = { months: {}, facts: {} };
   readRows_(monthsSheet_(), 3).forEach(x => {

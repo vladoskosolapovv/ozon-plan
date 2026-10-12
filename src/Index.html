@@ -14,7 +14,18 @@ window.addEventListener('error', function (e) {
 });
 document.addEventListener('DOMContentLoaded', function () {
   var el = document.getElementById('status');
-  if (el && window.__earlyErrors.length) el.innerHTML = '<div class="msg err" style="width:100%">Ошибка на странице: ' + window.__earlyErrors.join('; ').replace(/[&<>]/g, '') + '</div>';
+  if (el && window.__earlyErrors.length) {
+    var big = '', ss = document.getElementsByTagName('script');
+    for (var i = 0; i < ss.length; i++) if (!ss[i].src && ss[i].textContent.length > big.length) big = ss[i].textContent;
+    var lines = big.split('\n'), odd = [];
+    for (var k = 0; k < lines.length; k++) {
+      var n = (lines[k].match(/`/g) || []).length;
+      if (n % 2) odd.push((k + 1) + ': ' + lines[k].trim().slice(0, 70));
+    }
+    el.innerHTML = '<div class="msg err" style="width:100%">Ошибка на странице: ' + window.__earlyErrors.join('; ').replace(/[&<>]/g, '') +
+      '<pre id="diag" style="white-space:pre-wrap;font-size:11px;line-height:1.3;margin:8px 0 0">len=' + big.length + ' lines=' + lines.length + '\n' +
+      odd.join('\n').replace(/[&<>]/g, function (c) { return c === '&' ? '&amp;' : c === '<' ? '&lt;' : '&gt;'; }) + '</pre></div>';
+  }
 });
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">

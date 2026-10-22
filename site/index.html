@@ -181,6 +181,7 @@ table.ed tr.grp td.gl{color:var(--muted);font-weight:500;font-size:12px}
 table.ed tr.grp input{background:var(--surface);font-weight:600}
 table.ed .gcab{display:inline-block;font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:1px 6px;margin-right:4px}
 table.ed .gn{font-weight:400;color:var(--muted);font-size:12px;margin-left:4px}
+table.ed td.stc{color:var(--good)}
 table.ed td.calc{color:var(--ink);font-variant-numeric:tabular-nums;min-width:90px}
 table.ed td.warn-t{color:var(--warn)}
 table.ed input::placeholder{color:var(--muted);opacity:.75}
@@ -1329,7 +1330,7 @@ async function addToCatalog(items) {
 const NS_MAIN = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
 const XMLH = '<' + '?xml version="1.0" encoding="UTF-8" standalone="yes"?' + '>';
 /* --- таблица плана в Excel: как на сайте, с формулами; её же можно загрузить обратно --- */
-const TPL_COLS = ['Кабинет', 'Категория', 'Артикул', 'Цена, ₽', 'План, шт', 'План, ₽', 'Порог ROI', 'Норм ROI', 'Сверх ROI', 'С/с, ₽/шт (в строке категории — % от цены)', 'Выкуп', 'ЧП план, ₽'];
+const TPL_COLS = ['Кабинет', 'Категория', 'Артикул', 'Цена, ₽', 'План, шт', 'План, ₽', 'Порог ROI', 'Норм ROI', 'Сверх ROI', 'С/с, ₽/шт (в строке категории — % от цены)', 'Выкуп', 'ЧП план, ₽', 'ЧП при сверх ROI, ₽'];
 async function exportPlanXlsx(mid) {
   const src = S.draftOf === mid && S.draft ? S.draft : S.months[mid];
   if (!src) return;
@@ -1358,12 +1359,14 @@ async function exportPlanXlsx(mid) {
       const rn = has(r.norm) ? num(r.norm) : norm, rb = r.buyManual && has(r.buy) ? num(r.buy) : buy;
       const rub = has(r.price) && num(r.price) > 0 ? Math.round(num(r.price) * num(r.qty)) : num(r.rub);
       const chp = num(r.qty) * rb * num(cost) * rn;
+      const rs = has(r.st) ? num(r.st) : has(c.st) ? num(c.st) : rn, chpSt = num(r.qty) * rb * num(cost) * rs;
       return [r.cab, r.cat, r.art, {v: E(has(r.price) ? num(r.price) : ''), s: 2},
         {v: cp ? '' : E(num(r.qty) || ''), s: 2},
         cp ? '' : has(r.price) && num(r.price) > 0 ? {f: `D${n}*E${n}`, v: rub, s: 2} : {v: E(rub || ''), s: 2},
         {v: E(has(r.min) ? num(r.min) : ''), s: 3}, {v: E(has(r.norm) ? num(r.norm) : ''), s: 3}, {v: E(has(r.st) ? num(r.st) : ''), s: 3},
         {v: E(cost), s: 2}, {v: E(r.buyManual && has(r.buy) ? num(r.buy) : ''), s: 8},
-        cp ? '' : {f: `E${n}*IF(K${n}="",K$${r0},K${n})*J${n}*IF(H${n}="",H$${r0},H${n})`, v: Math.round(chp), s: 2}];
+        cp ? '' : {f: `E${n}*IF(K${n}="",K$${r0},K${n})*J${n}*IF(H${n}="",H$${r0},H${n})`, v: Math.round(chp), s: 2},
+        cp ? '' : {f: `E${n}*IF(K${n}="",K$${r0},K${n})*J${n}*IF(I${n}<>"",I${n},IF(I$${r0}<>"",I$${r0},IF(H${n}<>"",H${n},H$${r0})))`, v: Math.round(chpSt), s: 2}];
     });
     const sum = col => arts.reduce((t, x) => t + (typeof x[col] === 'object' && x[col] ? num(x[col].v) : num(x[col])), 0);
     rows.push([{v: g.cab, s: 4}, {v: g.cat, s: 4}, {v: '', s: 4}, {v: '', s: 4},
@@ -1371,10 +1374,11 @@ async function exportPlanXlsx(mid) {
       cp ? {v: catTarget(c), s: 5} : {f: `SUM(F${a}:F${b})`, v: sum(5), s: 5},
       {v: E(has(c.min) ? num(c.min) : ''), s: 6}, {v: E(has(c.norm) ? num(c.norm) : ''), s: 6}, {v: E(has(c.st) ? num(c.st) : ''), s: 6},
       {v: E(cs || ''), s: 9}, {v: E(buy), s: 9},
-      cp ? {f: `F${r0}*K${r0}*J${r0}*H${r0}`, v: Math.round(catTarget(c) * buy * cs * norm), s: 5} : {f: `SUM(L${a}:L${b})`, v: sum(11), s: 5}]);
+      cp ? {f: `F${r0}*K${r0}*J${r0}*H${r0}`, v: Math.round(catTarget(c) * buy * cs * norm), s: 5} : {f: `SUM(L${a}:L${b})`, v: sum(11), s: 5},
+      cp ? {f: `F${r0}*K${r0}*J${r0}*IF(I${r0}<>"",I${r0},H${r0})`, v: Math.round(catTarget(c) * buy * cs * (has(c.st) ? num(c.st) : norm)), s: 5} : {f: `SUM(M${a}:M${b})`, v: sum(12), s: 5}]);
     arts.forEach(x => rows.push(x));
   });
-  await saveWorkbook('plan-' + mid + '.xlsx', [{name: 'План месяца', widths: [12, 24, 30, 11, 11, 14, 10, 10, 10, 14, 10, 14], rows, freeze: 3}]);
+  await saveWorkbook('plan-' + mid + '.xlsx', [{name: 'План месяца', widths: [12, 24, 30, 11, 11, 14, 10, 10, 10, 14, 10, 14, 14], rows, freeze: 3}]);
 }
 
 /* xlsx собирается в браузере. Стили: 0 текст, 1 заголовок, 2 число, 3 %, 4–6 строка категории (текст/число/%), 7 титул, 8 0,0%, 9 категория 0,0%, 10 примечание */
@@ -1525,7 +1529,7 @@ function renderPlan() {
         <td>${pIn('c.' + ci + '.st', c.st, 'Сверх ROI категории ' + r.cat)}</td>
         <td>${pIn('c.' + ci + '.cshare', c.cshare, 'Доля себестоимости в цене, % — ' + r.cat, au.cshare != null ? pctIn(au.cshare) : '', ` title="${esc(csT)}"`)}<span class="unit">% цены</span></td>
         <td>${pIn('c.' + ci + '.buy', c.buy, 'Выкуп категории ' + r.cat, pctIn(au.buy != null ? au.buy : DEF_BUY), ` title="${esc(buyT)}"`)}</td>
-        <td class="n" id="gc${gi}"></td></tr>`;
+        <td class="n" id="gc${gi}"></td><td class="n stc" id="gs${gi}"></td></tr>`;
     }
     const f = fb[r.cab + '|' + r.art] || {};
     const inCat = CI.byKey[r.cab + '|' + r.art] ? '' : ' <span class="tag-new" title="Артикула нет в настройках">нет в настройках</span>';
@@ -1538,7 +1542,7 @@ function renderPlan() {
       <td>${pIn('p.' + i + '.st', r.st, 'Сверх ROI ' + r.art, pctIn(c.st))}</td>
       <td><input class="w" data-k="p.${i}.cost" value="${has(r.cost) ? r.cost : ''}" placeholder="${!has(r.cost) && f.planCost ? Math.round(f.planCost) : ''}" title="${!has(r.cost) && f.planCost ? 'Из отчёта: ' + Math.round(f.planCost) + ' ₽' : ''}" aria-label="Себестоимость ${esc(r.art)}"${has(r.cost) || f.planCost ? '' : ' style="background:var(--warn-bg)"'} inputmode="decimal"></td>
       <td>${pIn('p.' + i + '.buy', r.buyManual ? r.buy : null, 'Выкуп ' + r.art, '', ' title="Пусто — выкуп категории"')}</td>
-      <td class="n calc" id="chp${i}"></td></tr>`;
+      <td class="n calc" id="chp${i}"></td><td class="n calc stc" id="chs${i}"></td></tr>`;
   });
   el.innerHTML = msg + xl + tools + `
     <div class="bar" style="margin-top:14px">
@@ -1550,9 +1554,9 @@ function renderPlan() {
     <div class="base" id="planTot"></div>
     <p class="hint">Вводите цену и план в штуках — план в ₽ и ЧП считаются сами. <b>Строка категории</b>: ROI действует на все её артикулы (пустая ячейка у артикула = ROI категории, серым);
       выкуп — средний по категории за месяц из отчётов (серым), можно вписать свой. <b>План на всю категорию</b>: впишите сумму в ₽ в строке категории — план станет общим,
-      без разбивки по артикулам (факт по артикулам по-прежнему виден в трекере), ЧП плана = сумма × выкуп × доля с/с в цене × норм ROI.
+      без разбивки по артикулам (факт по артикулам по-прежнему виден в трекере), ЧП плана = сумма × выкуп × доля с/с в цене × норм ROI. Последняя колонка — тот же расчёт по сверх ROI (потолок; где сверх не задан — по норме).
       Пустая себестоимость берётся из последних отчётов. Состав артикулов и категорий — во вкладке «Настройки».${off ? ` Снято с ведения и не входит в план: ${off}.` : ''}</p>
-    <div class="edbox"><table class="ed plan"><thead><tr><th>Артикул</th><th>Цена, ₽</th><th>План, шт</th><th>План, ₽</th><th>Порог ROI, %</th><th>Норм ROI, %</th><th>Сверх ROI, %</th><th>С/с, ₽/шт</th><th>Выкуп, %</th><th>ЧП план, ₽</th></tr></thead><tbody>${body}</tbody></table></div>`;
+    <div class="edbox"><table class="ed plan"><thead><tr><th>Артикул</th><th>Цена, ₽</th><th>План, шт</th><th>План, ₽</th><th>Порог ROI, %</th><th>Норм ROI, %</th><th>Сверх ROI, %</th><th>С/с, ₽/шт</th><th>Выкуп, %</th><th>ЧП план, ₽</th><th title="Тот же расчёт, но по сверх ROI — потолок плана. Где сверх не задан — по норм ROI">ЧП при сверх, ₽</th></tr></thead><tbody>${body}</tbody></table></div>`;
   planCalc();
 }
 
@@ -1564,7 +1568,7 @@ function planCalc() {
   D.categories.forEach(c => { cm[c.cab + '|' + c.cat] = c; });
   const fb = {};
   if (MD && MD.mid === S.mid) MD.rows.forEach(n => { fb[n.cab + '|' + n.art] = n; });
-  const G = {}, T = {qty: 0, rub: 0, chp: 0, base: 0};
+  const G = {}, T = {qty: 0, rub: 0, chp: 0, base: 0, chs: 0};
   D.plan.forEach((r, i) => {
     if (CI.isOff(r.cab, r.art)) return;
     const k = r.cab + '|' + r.cat, c = cm[k] || {}, f = fb[r.cab + '|' + r.art] || {};
@@ -1574,6 +1578,7 @@ function planCalc() {
     const cost = has(r.cost) ? num(r.cost) : (f.planCost || 0);
     const buy = r.buyManual && has(r.buy) ? num(r.buy) : cbuy;
     const base = cp ? 0 : num(r.qty) * buy * cost, chp = base * norm;
+    const chs = base * (has(r.st) ? num(r.st) : has(c.st) ? num(c.st) : norm); // нет сверх — как по норме
     const tr = document.querySelector(`tr[data-i="${i}"]`);
     const gi = tr ? tr.dataset.gi : null;
     if (tr) {
@@ -1587,21 +1592,24 @@ function planCalc() {
       rb.classList.toggle('warn-t', !cp && !!num(r.qty) && !has(r.price) && !num(r.rub));
     }
     if (ch) ch.textContent = chp ? R(chp) : '–';
-    if (gi != null) { const g = G[gi] = G[gi] || {qty: 0, rub: 0, chp: 0, base: 0, k}; g.qty += cp ? 0 : num(r.qty); g.rub += cp ? 0 : num(r.rub); g.chp += chp; g.base += base; }
+    const cs = document.getElementById('chs' + i); if (cs) cs.textContent = chs ? R(chs) : '–';
+    if (gi != null) { const g = G[gi] = G[gi] || {qty: 0, rub: 0, chp: 0, base: 0, chs: 0, k}; g.qty += cp ? 0 : num(r.qty); g.rub += cp ? 0 : num(r.rub); g.chp += chp; g.base += base; g.chs += chs; }
   });
   Object.keys(G).forEach(gi => {
     const g = G[gi], c = cm[g.k] || {}, tgt = catTarget(c);
-    if (tgt > 0) { g.rub = tgt; g.base = tgt * catBuyOf(c, AU[g.k]) * catCsOf(c, AU[g.k]); g.chp = g.base * num(c.norm); }
+    if (tgt > 0) { g.rub = tgt; g.base = tgt * catBuyOf(c, AU[g.k]) * catCsOf(c, AU[g.k]); g.chp = g.base * num(c.norm); g.chs = g.base * (has(c.st) ? num(c.st) : num(c.norm)); }
+    const gs = document.getElementById('gs' + gi); if (gs) gs.textContent = g.chs ? R(g.chs) + ' ₽' : '–';
     const q = document.getElementById('gq' + gi); if (q) q.textContent = tgt > 0 ? '–' : g.qty ? R(g.qty) + ' шт' : '–';
     const r = document.getElementById('gr' + gi); if (r) r.placeholder = g.rub && !tgt ? R(g.rub) + ' ₽' : 'сумма';
     const ch = document.getElementById('gc' + gi);
     if (ch) { ch.textContent = g.chp ? R(g.chp) + ' ₽' : '–'; ch.title = tgt > 0 && !catCsOf(c, AU[g.k]) ? 'Нет доли себестоимости — впишите её в строке категории' : ''; }
-    T.qty += g.qty; T.rub += g.rub; T.chp += g.chp; T.base += g.base;
+    T.qty += g.qty; T.rub += g.rub; T.chp += g.chp; T.base += g.base; T.chs += g.chs;
   });
   const tot = document.getElementById('planTot');
   if (tot) tot.innerHTML = `<div><b>${R(T.qty)} шт</b><span>план заказов по артикулам</span></div>
     <div><b>${MN(T.rub)} ₽</b><span>план заказов</span></div>
-    <div><b>${MN(T.chp)} ₽</b><span>план ЧП</span></div>
+    <div><b>${MN(T.chp)} ₽</b><span>план ЧП (по норм ROI)</span></div>
+    <div><b>${MN(T.chs)} ₽</b><span>ЧП при сверх ROI</span></div>
     <div><b>${T.base ? P(T.chp / T.base) : '–'}</b><span>ROI плана (средний)</span></div>`;
 }
 

@@ -52,7 +52,7 @@ header.top{position:sticky;top:0;z-index:20;background:var(--surface);border-bot
 .brand h1{font:600 18px/1.1 var(--f-display);letter-spacing:-.01em;margin:0}
 .brand .tag{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .ctl{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px}
-select,input[type=text],input[type=number],input[type=month],input[type=search],textarea{
+select,input[type=text],input[type=password],input[type=number],input[type=month],input[type=search],textarea{
   background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:6px 9px;min-width:0}
 select:focus,input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
@@ -82,6 +82,12 @@ section[hidden]{display:none!important}
 h2{font:600 15px/1.2 var(--f-display);margin:22px 0 10px;letter-spacing:-.005em}
 .hint{color:var(--muted);font-size:12.5px;max-width:78ch}
 .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.setup{width:100%;font-size:14px;color:var(--ink);max-width:860px}
+.setup h2{font-family:var(--f-display);font-size:17px;font-weight:600;margin:2px 0 8px}
+.setup ol{padding-left:20px;margin:10px 0;line-height:1.65;font-size:13.5px;max-width:none}
+.setup a{color:var(--accent)}
+.setup .bar input{min-width:0}
+.linkbtn{background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer;font:inherit}
 
 /* KPI tiles */
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
@@ -275,25 +281,178 @@ const pref = {
   set(k, v) { try { localStorage.setItem('ozonPlan.ui.' + k, JSON.stringify(v)); } catch (e) {} }
 };
 
-/* ============ хранилище: Google-таблица или браузер ============ */
-const Backend = (() => {
-  const gas = typeof google !== 'undefined' && google.script && google.script.run;
-  if (gas) {
-    const call = (fn, ...args) => new Promise((res, rej) =>
-      google.script.run.withSuccessHandler(res).withFailureHandler(e => rej(new Error(e && e.message || String(e))))[fn](...args));
-    return {
-      kind: 'gas',
-      ping: () => call('ping'),
-      load: async () => JSON.parse(await call('loadAll')),
-      saveMonth: (id, doc) => call('saveMonth', id, JSON.stringify(doc)),
-      deleteMonth: id => call('deleteMonth', id),
-      saveFact: (id, doc) => call('saveFact', id, doc.month, doc.period, JSON.stringify(doc)),
-      deleteFact: id => call('deleteFact', id),
-      importAll: data => call('importAll', JSON.stringify(data)),
-      saveHistory: rows => call('saveHistory', JSON.stringify(rows)),
-      backup: () => call('backupToDrive')
-    };
+/* ============ хранилище: приватный репозиторий GitHub или браузер ============ */
+// Данные лежат файлами в отдельном приватном репозитории:
+//   months/2026-10.json        — план месяца
+//   facts/2026-10_01-04.json   — факт периода
+//   history.csv                — сводка план/факт по месяцам (GitHub показывает её таблицей)
+// Каждое сохранение — коммит, поэтому любая прошлая версия плана видна в истории репозитория.
+const GH_DEFAULT_REPO = 'vladoskosolapovv/ozon-plan-data';
+const ghConf = {
+  get token() { try { return localStorage.getItem('ozonPlan.gh.token') || ''; } catch (e) { return ''; } },
+  get repo() { try { return localStorage.getItem('ozonPlan.gh.repo') || GH_DEFAULT_REPO; } catch (e) { return GH_DEFAULT_REPO; } },
+  get local() { try { return localStorage.getItem('ozonPlan.gh.local') === '1'; } catch (e) { return false; } },
+  save(token, repo) { try { localStorage.setItem('ozonPlan.gh.token', token); localStorage.setItem('ozonPlan.gh.repo', repo); localStorage.removeItem('ozonPlan.gh.local'); } catch (e) {} },
+  setLocal(on) { try { on ? localStorage.setItem('ozonPlan.gh.local', '1') : localStorage.removeItem('ozonPlan.gh.local'); } catch (e) {} },
+  forget() { try { localStorage.removeItem('ozonPlan.gh.token'); } catch (e) {} }
+};
+
+const b64enc = s => {
+  const bytes = new TextEncoder().encode(s);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return btoa(bin);
+};
+const b64dec = b => new TextDecoder().decode(Uint8Array.from(atob(String(b).replace(/\s/g, '')), c => c.charCodeAt(0)));
+
+// кэш содержимого файлов по их sha: второй и следующие заходы грузят только изменившиеся файлы
+const BlobCache = (() => {
+  let dbp = null;
+  const db = () => dbp || (dbp = new Promise((res, rej) => {
+    try {
+      const r = indexedDB.open('ozonPlanCache', 1);
+      r.onupgradeneeded = () => r.result.createObjectStore('blobs');
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    } catch (e) { rej(e); }
+  }));
+  const tx = (mode, fn) => db().then(d => new Promise((res, rej) => {
+    const t = d.transaction('blobs', mode); const st = t.objectStore('blobs');
+    const out = fn(st); t.oncomplete = () => res(out && out.result); t.onerror = () => rej(t.error);
+  }));
+  return {
+    get: sha => tx('readonly', st => st.get(sha)).catch(() => undefined),
+    put: (sha, text) => tx('readwrite', st => st.put(text, sha)).catch(() => undefined)
+  };
+})();
+
+function ghError(status, body) {
+  const m = body && body.message ? body.message : '';
+  if (status === 401) return 'ключ GitHub не подходит или истёк — введите новый';
+  if (status === 403 && /rate limit/i.test(m)) return 'GitHub временно ограничил число запросов, попробуйте через минуту';
+  if (status === 403) return 'у ключа нет права записи в репозиторий данных (нужно Contents: Read and write)';
+  if (status === 404) return 'репозиторий данных не найден или ключ к нему не допущен';
+  return 'GitHub ответил ' + status + (m ? ': ' + m : '');
+}
+
+const GitHubBackend = () => {
+  const API = 'https://api.github.com/repos/' + ghConf.repo;
+  const shas = {};      // путь файла → sha текущей версии
+  const texts = {};     // путь файла → текст (чтобы не делать пустых коммитов)
+  let branch = 'main';
+  let queue = Promise.resolve();
+  const serial = fn => (queue = queue.catch(() => {}).then(fn)); // коммиты строго по одному, иначе GitHub отвечает конфликтом
+
+  async function req(path, opt = {}) {
+    const r = await fetch(API + path, {
+      method: opt.method || 'GET',
+      cache: 'no-store',
+      headers: Object.assign({Authorization: 'Bearer ' + ghConf.token, Accept: 'application/vnd.github+json'}, opt.body ? {'Content-Type': 'application/json'} : {}),
+      body: opt.body ? JSON.stringify(opt.body) : undefined
+    });
+    if (r.status === 204) return null;
+    const j = await r.json().catch(() => null);
+    if (!r.ok) { const e = new Error(ghError(r.status, j)); e.status = r.status; e.body = j; throw e; }
+    return j;
   }
+  const enc = p => p.split('/').map(encodeURIComponent).join('/');
+
+  async function currentSha(path) {
+    try { const j = await req('/contents/' + enc(path) + '?ref=' + encodeURIComponent(branch)); return j && j.sha; }
+    catch (e) { if (e.status === 404) return undefined; throw e; }
+  }
+
+  const putFile = (path, text, message) => serial(async () => {
+    if (texts[path] === text && shas[path]) return;
+    let sha = shas[path];
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const body = {message, content: b64enc(text), branch};
+        if (sha) body.sha = sha;
+        const j = await req('/contents/' + enc(path), {method: 'PUT', body});
+        shas[path] = j.content.sha; texts[path] = text;
+        BlobCache.put(j.content.sha, text);
+        return;
+      } catch (e) {
+        if ((e.status === 409 || e.status === 422) && attempt < 3) { sha = await currentSha(path); continue; }
+        throw e;
+      }
+    }
+  });
+
+  const delFile = (path, message) => serial(async () => {
+    let sha = shas[path] || await currentSha(path);
+    if (!sha) return;
+    for (let attempt = 0; ; attempt++) {
+      try { await req('/contents/' + enc(path), {method: 'DELETE', body: {message, sha, branch}}); break; }
+      catch (e) {
+        if (e.status === 404) break;
+        if ((e.status === 409 || e.status === 422) && attempt < 3) { sha = await currentSha(path); if (!sha) break; continue; }
+        throw e;
+      }
+    }
+    delete shas[path]; delete texts[path];
+  });
+
+  const json = doc => JSON.stringify(doc, null, 1) + '\n';
+  const monthPath = id => 'months/' + id + '.json';
+  const factPath = id => 'facts/' + id + '.json';
+  const factLabel = doc => monthLabel(doc.month || '') + (doc.period ? ', ' + doc.period : '');
+
+  return {
+    kind: 'github',
+    repo: ghConf.repo,
+    ping: async () => { const j = await req(''); branch = j.default_branch || 'main'; return 'ok'; },
+    load: async (onProgress) => {
+      const out = {months: {}, facts: {}};
+      let tree;
+      try { tree = await req('/git/trees/' + encodeURIComponent(branch) + '?recursive=1'); }
+      catch (e) { if (e.status === 409 || e.status === 404) return out; throw e; } // пустой репозиторий — данных ещё нет
+      const files = (tree.tree || []).filter(x => x.type === 'blob' && /^(months|facts)\/[^/]+\.json$|^history\.csv$/.test(x.path));
+      let done = 0;
+      const one = async f => {
+        shas[f.path] = f.sha;
+        let text = await BlobCache.get(f.sha);
+        if (typeof text !== 'string') {
+          const b = await req('/git/blobs/' + f.sha);
+          text = b64dec(b.content);
+          BlobCache.put(f.sha, text);
+        }
+        texts[f.path] = text;
+        done++; if (onProgress) onProgress(done, files.length);
+        if (f.path === 'history.csv') return;
+        try {
+          const doc = JSON.parse(text);
+          const id = f.path.replace(/^(months|facts)\//, '').replace(/\.json$/, '');
+          (f.path.startsWith('months/') ? out.months : out.facts)[id] = doc;
+        } catch (e) { console.warn('Битый файл пропущен:', f.path); }
+      };
+      for (let i = 0; i < files.length; i += 8) await Promise.all(files.slice(i, i + 8).map(one));
+      return out;
+    },
+    saveMonth: (id, doc) => putFile(monthPath(id), json(doc), 'План: ' + monthLabel(id)),
+    deleteMonth: id => delFile(monthPath(id), 'Удалён план: ' + monthLabel(id)),
+    saveFact: (id, doc) => putFile(factPath(id), json(doc), 'Факт: ' + factLabel(doc)),
+    deleteFact: id => delFile(factPath(id), 'Удалён факт: ' + id),
+    importAll: async data => {
+      for (const id of Object.keys(data.months || {})) await putFile(monthPath(id), json(data.months[id]), 'Импорт плана: ' + monthLabel(id));
+      for (const id of Object.keys(data.facts || {})) await putFile(factPath(id), json(data.facts[id]), 'Импорт факта: ' + factLabel(data.facts[id]));
+    },
+    saveHistory: rows => {
+      const head = ['Месяц', 'Дней с данными', 'Дней в месяце', 'План заказы, руб', 'Факт заказы, руб', '% к плану на дату',
+        'Прогноз / итог, руб', '% от плана месяца', 'План ЧП, руб', 'Факт ЧП, руб', '% ЧП к плану на дату', 'Рента факт'];
+      const p = v => v === '' || v == null ? '' : Math.round(v * 1000) / 10 + '%';
+      const q = v => /[",\n]/.test(String(v)) ? '"' + String(v).replace(/"/g, '""') + '"' : v;
+      const lines = [head].concat(rows.map(r => [monthLabel(r.month), r.loaded, r.days, r.planRub, r.factRub, p(r.pct), r.forecast, p(r.pctMonth),
+        r.planChp, r.factChp, p(r.pctChp), p(r.rent)])).map(a => a.map(q).join(','));
+      return putFile('history.csv', lines.join('\n') + '\n', 'История план/факт');
+    },
+    commitsUrl: () => `https://github.com/${ghConf.repo}/commits/${branch}`,
+    backup: null
+  };
+};
+
+const LocalBackend = () => {
   const KEY = 'ozonPlan.data.v1';
   const read = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {months: {}, facts: {}}; } catch (e) { return {months: {}, facts: {}}; } };
   const write = d => { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch (e) { throw new Error('Браузер не дал сохранить данные (' + e.message + '). Сделайте экспорт в файл.'); } };
@@ -309,7 +468,10 @@ const Backend = (() => {
     saveHistory: async () => {},
     backup: null
   };
-})();
+};
+
+let Backend = null;
+const pickBackend = () => (Backend = ghConf.local ? LocalBackend() : ghConf.token ? GitHubBackend() : null);
 
 /* ============ состояние ============ */
 const S = {
@@ -462,9 +624,9 @@ function pushHistory() { Backend.saveHistory(historyRows()).catch(() => {}); }
 function setStatus() {
   const el = $('#status');
   if (!S.loaded) { el.innerHTML = '<span class="pill"><span class="dot"></span>Загружаю данные…</span>'; return; }
-  const where = Backend.kind === 'gas'
-    ? '<span class="pill"><span class="dot ok"></span>Данные в Google-таблице</span>'
-    : '<span class="pill"><span class="dot off"></span>Локальный режим: данные в этом браузере, делайте экспорт</span>';
+  const where = Backend.kind === 'github'
+    ? `<span class="pill"><span class="dot ok"></span>Данные в GitHub · <a href="${esc(Backend.commitsUrl())}" target="_blank" rel="noopener">история изменений</a></span>`
+    : '<span class="pill"><span class="dot off"></span>Локальный режим: данные только в этом браузере, делайте экспорт</span>';
   let info = '';
   if (MD) {
     const done = MD.per.filter(p => MD.F[p.id]).map(p => p.label);
@@ -482,6 +644,7 @@ function fillMonthSel() {
 }
 
 function renderAll() {
+  if (!S.loaded || !Backend) return;
   recompute();
   fillMonthSel(); recompute();
   setStatus();
@@ -799,7 +962,7 @@ function renderHistory() {
       <p class="hint">Контур — план месяца, синяя заливка — факт заказов, пунктир — прогноз до конца месяца, если месяц ещё не закрыт.</p></div>
     <h2>Таблица</h2>
     <div class="tbox" style="max-height:none"><table class="t"><thead><tr><th>Месяц / кабинет</th><th>Дней с данными</th><th>План заказы, ₽</th><th>Факт заказы, ₽</th><th>% к плану на дату</th><th>Прогноз / итог, ₽</th><th>% от плана месяца</th><th>План ЧП, ₽</th><th>Факт ЧП, ₽</th><th>% ЧП</th><th>Рента</th></tr></thead><tbody>${rows}</tbody></table></div>
-    <p class="hint">Та же сводка сохраняется во вкладку «История» Google-таблицы при каждом сохранении плана или загрузке данных.</p>`;
+    <p class="hint">${Backend.kind === 'github' ? 'Та же сводка сохраняется в файл history.csv репозитория данных при каждом сохранении плана или загрузке данных. Прошлые версии плана — в истории изменений репозитория.' : 'В локальном режиме сводка есть только здесь.'}</p>`;
 }
 
 /* ============ ПЛАН МЕСЯЦА ============ */
@@ -1020,9 +1183,9 @@ function renderPlan() {
         <span class="spacer"></span>
         <button type="button" class="btn" id="expJson">Экспорт всех данных</button>
         <label class="btn" for="impJson" style="display:inline-block">Импорт данных</label><input type="file" id="impJson" accept=".json,application/json" hidden>
-        ${Backend.backup ? '<button type="button" class="btn" id="bkDrive">Копия на Google Диск</button>' : ''}
+        <button type="button" class="btn" id="ghSetup">${Backend.kind === 'github' ? 'Сменить ключ GitHub' : 'Подключить GitHub'}</button>
       </div>
-      <p class="hint" style="margin:8px 0 0">Экспорт и копия на Диск сохраняют все месяцы и весь факт одним JSON-файлом; импорт возвращает их обратно.</p>
+      <p class="hint" style="margin:8px 0 0">Экспорт сохраняет все месяцы и весь факт одним JSON-файлом, импорт возвращает их обратно. ${Backend.kind === 'github' ? `Данные хранятся в репозитории <b>${esc(Backend.repo)}</b>, каждое сохранение — отдельная версия.` : ''}</p>
     </div>`;
   if (!S.draft) { el.innerHTML = msg + xl + tools + '<div class="empty card" style="margin-top:10px"><b>Месяц не выбран</b>Загрузите план из Excel или импортируйте файл с данными.</div>'; return; }
   const D = S.draft;
@@ -1324,6 +1487,7 @@ async function importJson(file) {
 document.addEventListener('click', async e => {
   const b = e.target.closest('button, tr[data-cat]');
   if (!b) return;
+  if (!S.loaded && !b.matches('#tabs button, #modeSeg button')) return;
   if (b.matches('#tabs button')) { S.tab = b.dataset.tab; pref.set('tab', S.tab); S.planMsg = null; S.up.msg = null; S.up.confirmDel = null; renderAll(); return; }
   if (b.matches('#modeSeg button')) { S.mode = b.dataset.mode; pref.set('mode', S.mode); S.sim.sc = null; renderAll(); return; }
   if (b.dataset.scope) { S.scope = b.dataset.scope; renderTracker(); return; }
@@ -1362,12 +1526,7 @@ document.addEventListener('click', async e => {
     renderAll(); return;
   }
   if (b.id === 'expJson') { exportJson(); return; }
-  if (b.id === 'bkDrive') {
-    b.disabled = true; b.textContent = 'Сохраняю копию…';
-    try { const url = await Backend.backup(); S.planMsg = {t: 'ok', html: `Копия сохранена на Google Диск: <a href="${esc(url)}" target="_blank" rel="noopener">открыть файл</a>`}; }
-    catch (err) { S.planMsg = {t: 'err', html: 'Копия не сохранилась: ' + esc(err.message)}; }
-    renderPlan(); return;
-  }
+  if (b.id === 'ghSetup') { if (S.dirty && !confirm('Есть несохранённые правки плана. Перейти к ключу?')) return; showSetup(); return; }
   if (b.id === 'upSave') { saveUpload(); return; }
   if (b.id === 'upClear') { S.up.parsed = {}; S.up.msg = null; renderUpload(); return; }
   if (b.dataset.del) {
@@ -1429,10 +1588,39 @@ document.addEventListener('drop', e => { const d = e.target.closest && e.target.
 window.addEventListener('beforeunload', e => { if (S.dirty) { e.preventDefault(); e.returnValue = ''; } });
 
 /* ============ старт ============ */
-function showLoadProblem(text) {
-  const el = $('#status');
-  el.innerHTML = `<div class="msg err" style="width:100%">${text}
-    <div class="bar" style="margin:10px 0 0"><button type="button" class="btn" id="retryLoad">Повторить</button></div></div>`;
+function hideTabs() { ['tracker', 'sim', 'history', 'plan', 'upload'].forEach(t => { $('#tab-' + t).hidden = true; }); }
+
+function showLoadProblem(text, withSetup) {
+  hideTabs();
+  $('#status').innerHTML = `<div class="msg err" style="width:100%">${text}
+    <div class="bar" style="margin:10px 0 0"><button type="button" class="btn" id="retryLoad">Повторить</button>
+    ${withSetup ? '<button type="button" class="btn" id="ghSetup">Ввести другой ключ</button>' : ''}</div></div>`;
+}
+
+function showSetup(errText) {
+  S.loaded = false;
+  hideTabs();
+  const repo = ghConf.repo;
+  $('#status').innerHTML = `<div class="card setup">
+    <h2>Подключение к хранилищу данных</h2>
+    <p style="margin:0">План и факт хранятся в вашем приватном репозитории GitHub <b>${esc(repo)}</b>. На каждом устройстве ключ вводится один раз, дальше сайт открывается сразу.</p>
+    ${errText ? `<div class="msg err">${errText}</div>` : ''}
+    <ol>
+      <li>Откройте <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">создание ключа на GitHub</a> (вход под аккаунтом владельца репозитория).</li>
+      <li><b>Token name</b> — любое, например «План продаж, ноутбук». <b>Expiration</b> — самый долгий срок из предложенных.</li>
+      <li><b>Repository access</b> → Only select repositories → выберите <b>${esc(repo.split('/')[1] || repo)}</b>.</li>
+      <li><b>Permissions</b> → Repository permissions → <b>Contents</b> → Read and write.</li>
+      <li>Нажмите <b>Generate token</b>, скопируйте ключ (начинается с github_pat_) и вставьте сюда.</li>
+    </ol>
+    <div class="bar">
+      <input id="ghToken" type="password" autocomplete="off" spellcheck="false" placeholder="github_pat_…" aria-label="Ключ GitHub" style="flex:2 1 260px">
+      <input id="ghRepo" type="text" value="${esc(repo)}" spellcheck="false" aria-label="Репозиторий данных" style="flex:1 1 200px">
+      <button type="button" class="btn primary" id="ghConnect">Подключить</button>
+    </div>
+    <p class="hint" style="margin:0">Ключ хранится только в этом браузере и даёт доступ только к репозиторию данных.
+      Можно <button type="button" class="linkbtn" id="ghLocal">открыть без подключения</button> — тогда данные будут только в этом браузере.</p>
+  </div>`;
+  const inp = $('#ghToken'); if (inp) inp.focus();
 }
 
 const withTimeout = (p, ms) => {
@@ -1442,44 +1630,71 @@ const withTimeout = (p, ms) => {
 
 async function start() {
   S.loaded = false; S.error = null;
+  if (!pickBackend()) { showSetup(); return; }
   const t0 = Date.now();
-  let stage = 'Проверяю связь с Google-таблицей';
+  let stage = Backend.kind === 'github' ? 'Подключаюсь к GitHub' : 'Открываю данные браузера';
   const tick = setInterval(() => {
     if (S.loaded) return;
     $('#status').innerHTML = `<span class="pill"><span class="dot"></span>${stage}… ${Math.round((Date.now() - t0) / 1000)} с</span>`;
-  }, 500);
+  }, 400);
   try {
-    try { await withTimeout(Backend.ping(), 15000); }
+    try { await withTimeout(Backend.ping(), 20000); }
     catch (e) {
       clearInterval(tick);
-      if (e.message === 'timeout') {
-        showLoadProblem(`Google не отвечает на запросы страницы (15 секунд без ответа).<br>
-          Почти всегда причина — вход в несколько Google-аккаунтов в этом браузере. Откройте сайт в окне инкогнито (Ctrl+Shift+N) или в отдельном профиле Chrome, где вход только в аккаунт владельца таблицы.`);
-      } else {
-        const m = String(e.message || e);
-        showLoadProblem(/authoriz|авториз|permission|разрешени|PERMISSION_DENIED|401/i.test(m)
-          ? `Нет доступа: ${esc(m)}.<br>Откройте сайт заново и в окне Google разрешите все пункты доступа. Если в браузере несколько аккаунтов, откройте сайт в окне инкогнито.`
-          : `Сервер ответил ошибкой: ${esc(m)}`);
-      }
+      if (e.message === 'timeout') showLoadProblem('GitHub не ответил за 20 секунд. Проверьте интернет и нажмите «Повторить».');
+      else if (e.status === 401 || e.status === 404 || e.status === 403) showSetup(esc(e.message));
+      else showLoadProblem('Не удалось подключиться: ' + esc(String(e.message || e)) + (e instanceof TypeError ? '. Похоже, нет интернета.' : ''));
       return;
     }
-    stage = 'Загружаю данные из таблицы';
-    const data = await withTimeout(Backend.load(), 60000);
+    stage = 'Загружаю данные';
+    const data = await withTimeout(Backend.load((d, n) => { stage = `Загружаю данные: ${d} из ${n} файлов`; }), 90000);
     S.months = data.months || {}; S.facts = data.facts || {};
     S.loaded = true;
   } catch (e) {
     clearInterval(tick);
     showLoadProblem(e.message === 'timeout'
-      ? 'Связь с таблицей есть, но данные не загрузились за минуту. Нажмите «Повторить»; если повторится, пришлите скрин.'
-      : `Не удалось загрузить данные: ${esc(String(e.message || e))}`);
+      ? 'Данные не загрузились за полторы минуты. Нажмите «Повторить».'
+      : `Не удалось загрузить данные: ${esc(String(e.message || e))}`, e.status === 401 || e.status === 403);
     return;
   }
   clearInterval(tick);
+  if (S.mid && !S.months[S.mid]) S.mid = null;
   if (!Object.keys(S.months).length && S.tab !== 'plan') S.tab = 'plan';
   renderAll();
   console.log('Данные загружены за', Date.now() - t0, 'мс');
 }
-document.addEventListener('click', e => { if (e.target.id === 'retryLoad') { e.stopPropagation(); start(); } }, true);
+
+async function connectGitHub() {
+  const token = ($('#ghToken').value || '').trim();
+  const repo = ($('#ghRepo').value || '').trim().replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').replace(/\/$/, '');
+  if (!/^[\w.-]+\/[\w.-]+$/.test(repo)) { showSetup('Репозиторий пишется как владелец/название, например ' + esc(GH_DEFAULT_REPO) + '.'); return; }
+  if (!/^(github_pat_|ghp_)\w{20,}$/.test(token)) { showSetup('Это не похоже на ключ GitHub: он начинается с github_pat_ и вставляется целиком.'); return; }
+  const prev = {t: ghConf.token, r: ghConf.repo};
+  ghConf.save(token, repo);
+  const btn = $('#ghConnect'); if (btn) { btn.disabled = true; btn.textContent = 'Проверяю…'; }
+  try {
+    const r = await fetch('https://api.github.com/repos/' + repo, {cache: 'no-store', headers: {Authorization: 'Bearer ' + token, Accept: 'application/vnd.github+json'}});
+    const j = await r.json().catch(() => null);
+    if (!r.ok) throw Object.assign(new Error(ghError(r.status, j)), {status: r.status});
+    if (j.permissions && !j.permissions.push) throw new Error('у ключа нет права записи: в Permissions → Contents выберите Read and write');
+    if (!j.private) throw new Error(`репозиторий ${repo} публичный — данные увидят все. Сделайте его приватным (Settings → Danger Zone → Change visibility) и подключите снова`);
+  } catch (e) {
+    if (prev.t) ghConf.save(prev.t, prev.r); else ghConf.forget();
+    showSetup('Не подключилось: ' + esc(e.message));
+    $('#ghRepo').value = repo;
+    return;
+  }
+  start();
+}
+
+document.addEventListener('click', e => {
+  const id = e.target.id;
+  if (id === 'retryLoad') { e.stopPropagation(); start(); }
+  else if (id === 'ghConnect') { e.stopPropagation(); connectGitHub(); }
+  else if (id === 'ghLocal') { e.stopPropagation(); ghConf.setLocal(true); start(); }
+  else if (id === 'ghSetup' && !S.loaded) { e.stopPropagation(); showSetup(); }
+}, true);
+document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'ghToken') connectGitHub(); });
 start();
 </script>
 </body>

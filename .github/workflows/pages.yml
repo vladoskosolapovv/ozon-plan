@@ -48,6 +48,11 @@ jobs:
 
       - uses: actions/configure-pages@v5
 
+      - name: Пометить версию (по ней сайт понимает, что обновление вышло)
+        run: |
+          sed -i "s/__BUILD__/${GITHUB_SHA}/" site/index.html
+          printf '{"sha":"%s","at":"%s"}\n' "$GITHUB_SHA" "$(date -u +%FT%TZ)" > site/version.json
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site

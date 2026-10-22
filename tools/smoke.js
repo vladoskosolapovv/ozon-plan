@@ -16,7 +16,7 @@ const file = path.resolve(process.argv[2] || 'site/index.html');
     await page.waitForSelector('#ghToken', { timeout: 10000 });
     await page.click('#ghLocal');
     await page.waitForSelector('#tab-plan:not([hidden])', { timeout: 10000 });
-    for (const t of ['tracker', 'sim', 'history', 'upload', 'plan']) {
+    for (const t of ['tracker', 'sim', 'history', 'upload', 'settings', 'plan']) {
       await page.click(`#tabs button[data-tab=${t}]`);
       await page.waitForSelector(`#tab-${t}:not([hidden])`, { timeout: 5000 });
     }

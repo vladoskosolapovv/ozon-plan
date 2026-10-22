@@ -63,6 +63,22 @@ nav.tabs button{border:0;background:none;padding:10px 14px;cursor:pointer;color:
 nav.tabs button.on{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
 .status{font-size:12.5px;color:var(--muted);padding-block:10px;display:flex;flex-wrap:wrap;gap:6px 16px;align-items:center}
 .status .pill{display:inline-flex;gap:6px;align-items:center}
+#upd:empty{display:none}
+#upd{padding-top:10px}
+.upd{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;background:var(--accent-soft);border:1px solid var(--accent);border-radius:10px;padding:10px 14px;font-size:13.5px;color:var(--ink)}
+.upd + .upd{margin-top:8px}
+.upd .ttl{font-weight:600}
+.upd .st{font-size:12.5px;color:var(--muted)}
+.upd .st.ok{color:var(--good)} .upd .st.bad{color:var(--bad)}
+.upd details{flex-basis:100%;font-size:13px}
+.upd details summary{cursor:pointer;color:var(--accent)}
+.upd .notes{margin:6px 0 0;padding-left:18px;line-height:1.55;max-width:90ch}
+.upd .notes p{margin:6px 0 2px;font-weight:600}
+.upd.err{background:var(--bad-bg);border-color:var(--bad)}
+.upd.done{background:var(--good-bg);border-color:var(--good)}
+.spin{width:14px;height:14px;border:2px solid var(--accent);border-right-color:transparent;border-radius:50%;display:inline-block;animation:spin .8s linear infinite;vertical-align:-2px}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion: reduce){.spin{animation:none}}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
 .dot.ok{background:var(--good)} .dot.off{background:var(--warn)}
 
@@ -232,6 +248,7 @@ textarea{width:100%;min-height:120px;font-family:ui-monospace,Menlo,Consolas,mon
 </header>
 
 <div class="wrap">
+  <div id="upd"></div>
   <div class="status" id="status"><span class="pill"><span class="dot"></span>Загружаю данные…</span></div>
   <main>
     <section id="tab-tracker"></section>
@@ -2084,6 +2101,160 @@ document.addEventListener('dragleave', dropOn(false));
 document.addEventListener('drop', e => { const d = e.target.closest && e.target.closest('#drop'); if (!d) return; e.preventDefault(); d.classList.remove('over'); handleFiles(e.dataTransfer.files); });
 window.addEventListener('beforeunload', e => { if (S.dirty || S.cat.dirty) { e.preventDefault(); e.returnValue = ''; } });
 
+/* ============ обновления сайта: кнопка вместо захода на GitHub ============ */
+// Правки приходят pull request'ами в репозиторий кода. Сайт показывает открытые PR, статус автопроверки
+// и ставит обновление кнопкой (merge через GitHub API), потом ждёт публикации и перезагружается.
+const CODE_REPO = 'vladoskosolapovv/ozon-plan';
+const BUILD = '__BUILD__'; // при публикации сюда подставляется sha коммита
+const isBuild = v => /^[0-9a-f]{40}$/.test(v || '');
+const Upd = {list: [], state: null, msg: null, newer: null, last: 0, timer: null};
+
+async function ghApi(path, opt = {}) {
+  const r = await fetch('https://api.github.com' + path, {
+    method: opt.method || 'GET', cache: 'no-store',
+    headers: Object.assign({Accept: 'application/vnd.github+json'}, ghConf.token ? {Authorization: 'Bearer ' + ghConf.token} : {}, opt.body ? {'Content-Type': 'application/json'} : {}),
+    body: opt.body ? JSON.stringify(opt.body) : undefined
+  });
+  const j = r.status === 204 ? null : await r.json().catch(() => null);
+  if (!r.ok) { const e = new Error((j && j.message) || ('GitHub ответил ' + r.status)); e.status = r.status; throw e; }
+  return j;
+}
+
+async function checkRun(sha, event) {
+  try {
+    const j = await ghApi(`/repos/${CODE_REPO}/actions/runs?head_sha=${sha}&per_page=10`);
+    const runs = (j.workflow_runs || []).filter(x => !event || x.event === event);
+    const r = runs[0];
+    if (!r) return {st: 'none'};
+    if (r.status !== 'completed') return {st: 'pending', url: r.html_url};
+    return {st: r.conclusion === 'success' ? 'ok' : 'fail', url: r.html_url};
+  } catch (e) { return {st: 'unknown'}; }
+}
+
+async function checkUpdates() {
+  if (!ghConf.token || Upd.state) return;
+  Upd.last = Date.now();
+  try {
+    const prs = await ghApi(`/repos/${CODE_REPO}/pulls?state=open&base=main&per_page=10`);
+    const list = [];
+    for (const pr of prs) {
+      if (pr.draft) continue;
+      const ch = await checkRun(pr.head.sha, 'pull_request');
+      list.push({n: pr.number, title: pr.title, body: pr.body || '', url: pr.html_url, sha: pr.head.sha, check: ch.st, runUrl: ch.url});
+    }
+    Upd.list = list.sort((a, b) => a.n - b.n);
+  } catch (e) { Upd.list = []; }
+  // страница из кэша браузера старее опубликованной версии
+  try {
+    const v = await fetch('version.json?t=' + Date.now(), {cache: 'no-store'}).then(r => r.ok ? r.json() : null);
+    Upd.newer = v && isBuild(v.sha) && isBuild(BUILD) && v.sha !== BUILD ? v.sha : null;
+  } catch (e) { Upd.newer = null; }
+  renderUpd();
+  clearTimeout(Upd.timer);
+  if (Upd.list.some(x => x.check === 'pending')) Upd.timer = setTimeout(checkUpdates, 20000);
+}
+
+// короткое «что нового» из описания PR: заголовки, пункты, жирный
+function notesHtml(md) {
+  const lines = String(md).split('\n').map(l => l.trim()).filter(l => l && !/^🤖|^https?:\/\/claude\.ai|Generated with/.test(l));
+  let out = '', inList = false;
+  const inline = t => esc(t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/`(.+?)`/g, '<code>$1</code>');
+  lines.forEach(l => {
+    const li = l.match(/^[-*]\s+(.*)$/);
+    if (li) { if (!inList) { out += '<ul class="notes">'; inList = true; } out += '<li>' + inline(li[1]) + '</li>'; return; }
+    if (inList) { out += '</ul>'; inList = false; }
+    out += '<p>' + inline(l.replace(/^#+\s*/, '')) + '</p>';
+  });
+  return out + (inList ? '</ul>' : '');
+}
+
+function renderUpd() {
+  const el = $('#upd'); if (!el) return;
+  let h = '';
+  if (Upd.msg) h += `<div class="upd ${Upd.msg.t === 'err' ? 'err' : 'done'}"><span>${Upd.msg.html}</span><span class="spacer"></span><button type="button" class="linkbtn" id="updHide">скрыть</button></div>`;
+  if (Upd.state) {
+    const s = Upd.state, sec = Math.round((Date.now() - s.t0) / 1000);
+    h += `<div class="upd"><span class="spin" aria-hidden="true"></span><span class="ttl">Устанавливаю обновление «${esc(s.title)}»</span>
+      <span class="st">${esc(s.stage)} · ${sec} с. Обычно 1–3 минуты, страница перезагрузится сама.</span></div>`;
+  } else if (Upd.newer) {
+    h += `<div class="upd"><span class="ttl">Вышла новая версия сайта</span><span class="spacer"></span><button type="button" class="btn primary" id="updReload">Перезагрузить</button></div>`;
+  }
+  if (!Upd.state) Upd.list.forEach(u => {
+    const st = u.check === 'ok' ? '<span class="st ok">✓ проверка пройдена</span>'
+      : u.check === 'pending' ? '<span class="st"><span class="spin" aria-hidden="true"></span> идёт проверка…</span>'
+      : u.check === 'fail' ? '<span class="st bad">✕ проверка не прошла — ставить нельзя</span>'
+      : '<span class="st">проверка не найдена</span>';
+    h += `<div class="upd"><span class="ttl">Доступно обновление: ${esc(u.title)}</span>${st}<span class="spacer"></span>
+      <a class="st" href="${esc(u.url)}" target="_blank" rel="noopener">на GitHub</a>
+      <button type="button" class="btn primary" data-install="${u.n}"${u.check === 'ok' ? '' : ' disabled'}>Установить</button>
+      ${u.body ? `<details><summary>Что нового</summary>${notesHtml(u.body)}</details>` : ''}</div>`;
+  });
+  el.innerHTML = h;
+}
+
+function updError(e) {
+  if (e.status === 403 || e.status === 404) return `Ключу этого устройства не хватает прав на обновление сайта. На GitHub откройте
+    <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener">свои ключи</a> → ваш ключ → <b>Edit</b>:
+    в Repository access добавьте <b>${esc(CODE_REPO.split('/')[1])}</b>, в Permissions выберите <b>Contents</b> и <b>Pull requests</b> → Read and write → <b>Update</b>.
+    Ключ останется тем же, вводить заново не нужно. Потом нажмите «Установить» ещё раз.`;
+  if (e.status === 405) return 'Это обновление сейчас нельзя установить: ' + esc(e.message) + '. Напишите Claude, он поправит.';
+  if (e.status === 409) return 'Обновление изменилось, пока вы смотрели. Список обновлён — нажмите «Установить» ещё раз.';
+  return 'Не получилось установить: ' + esc(e.message);
+}
+
+async function installUpdate(n) {
+  const u = Upd.list.find(x => x.n === n); if (!u) return;
+  if ((S.dirty || S.cat.dirty) && !confirm('Есть несохранённые правки — после обновления страница перезагрузится и они пропадут. Продолжить?')) return;
+  Upd.msg = null;
+  Upd.state = {n, title: u.title, stage: 'Применяю изменения', t0: Date.now()};
+  renderUpd();
+  let sha;
+  try {
+    const r = await ghApi(`/repos/${CODE_REPO}/pulls/${n}/merge`, {method: 'PUT', body: {merge_method: 'squash', sha: u.sha}});
+    sha = r.sha;
+  } catch (e) {
+    Upd.state = null; Upd.msg = {t: 'err', html: updError(e)};
+    if (e.status === 409) { Upd.list = []; checkUpdates(); }
+    renderUpd(); return;
+  }
+  Upd.state.stage = 'Проверка и публикация';
+  const tick = setInterval(renderUpd, 1000);
+  const deadline = Date.now() + 8 * 60 * 1000;
+  while (Date.now() < deadline) {
+    await new Promise(r => setTimeout(r, 7000));
+    try {
+      const v = await fetch('version.json?t=' + Date.now(), {cache: 'no-store'}).then(r => r.ok ? r.json() : null);
+      if (v && v.sha === sha) {
+        clearInterval(tick);
+        Upd.state.stage = 'Готово, перезагружаю';
+        renderUpd();
+        setTimeout(() => { location.href = location.pathname + '?v=' + sha.slice(0, 7); }, 800);
+        return;
+      }
+    } catch (e) {}
+    const run = await checkRun(sha, 'push');
+    if (run.st === 'fail') {
+      clearInterval(tick);
+      Upd.state = null;
+      Upd.msg = {t: 'err', html: `Изменения приняты, но публикация не прошла — сайт остался прежним. <a href="${esc(run.url || '#')}" target="_blank" rel="noopener">Подробности</a>. Напишите Claude, он поправит.`};
+      renderUpd(); return;
+    }
+    Upd.state.stage = run.st === 'pending' ? 'Проверка и публикация' : 'Жду, пока GitHub опубликует сайт';
+  }
+  clearInterval(tick);
+  Upd.state = null;
+  Upd.msg = {t: 'err', html: 'Публикация идёт дольше обычного. Обновите страницу через пару минут.'};
+  renderUpd();
+}
+
+document.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.install) { e.stopPropagation(); installUpdate(+b.dataset.install); }
+  else if (b.id === 'updReload') { e.stopPropagation(); location.href = location.pathname + '?v=' + (Upd.newer || '').slice(0, 7); }
+  else if (b.id === 'updHide') { e.stopPropagation(); Upd.msg = null; renderUpd(); }
+}, true);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && Date.now() - Upd.last > 5 * 60 * 1000) checkUpdates(); });
+
 /* ============ старт ============ */
 function hideTabs() { ['tracker', 'sim', 'history', 'plan', 'upload', 'settings'].forEach(t => { $('#tab-' + t).hidden = true; }); }
 
@@ -2105,8 +2276,8 @@ function showSetup(errText) {
     <ol>
       <li>Откройте <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">создание ключа на GitHub</a> (вход под аккаунтом владельца репозитория).</li>
       <li><b>Token name</b> — любое, например «План продаж, ноутбук». <b>Expiration</b> — самый долгий срок из предложенных.</li>
-      <li><b>Repository access</b> → Only select repositories → выберите <b>${esc(repo.split('/')[1] || repo)}</b>.</li>
-      <li><b>Permissions</b> → Repository permissions → <b>Contents</b> → Read and write.</li>
+      <li><b>Repository access</b> → Only select repositories → выберите <b>${esc(repo.split('/')[1] || repo)}</b> и <b>${esc(CODE_REPO.split('/')[1])}</b> (второй нужен для кнопки обновления сайта).</li>
+      <li><b>Permissions</b> → Repository permissions → <b>Contents</b> → Read and write, <b>Pull requests</b> → Read and write.</li>
       <li>Нажмите <b>Generate token</b>, скопируйте ключ (начинается с github_pat_) и вставьте сюда.</li>
     </ol>
     <div class="bar">
@@ -2159,6 +2330,7 @@ async function start() {
   if (!Object.keys(S.months).length && S.tab !== 'plan') S.tab = 'plan';
   renderAll();
   console.log('Данные загружены за', Date.now() - t0, 'мс');
+  checkUpdates();
 }
 
 async function connectGitHub() {

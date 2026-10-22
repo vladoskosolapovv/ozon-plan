@@ -1,0 +1,59 @@
+name: Публикация сайта
+
+# Push в main → проверка → публикация на GitHub Pages.
+# Pull request → только проверка: зелёная галочка = можно жать «Merge».
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Проверить код страницы
+        run: |
+          npm install --no-save acorn@8.12.1 playwright@1.48.2
+          node tools/check-page.js site/index.html
+
+      - name: Открыть сайт в браузере и проверить, что он работает
+        run: |
+          npx playwright install --with-deps chromium
+          node tools/smoke.js site/index.html
+
+  deploy:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    needs: check
+    runs-on: ubuntu-latest
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+      - name: Итог
+        run: echo "::notice title=Готово::Сайт обновлён — ${{ steps.deployment.outputs.page_url }}"

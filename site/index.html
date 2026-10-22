@@ -160,7 +160,33 @@ table.mx td.me{outline:2px solid var(--ink)}
 /* plan editor */
 table.ed{border-collapse:collapse;width:100%;font-size:13px;min-width:860px}
 table.ed th{position:sticky;top:0;background:var(--surface-2);text-align:right;font-size:12px;color:var(--muted);padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
-table.ed th:nth-child(-n+2),table.ed td:nth-child(-n+2){text-align:left}
+table.ed th:first-child,table.ed td:first-child{text-align:left}
+table.ed tr.grp td.gl{color:var(--muted);font-weight:500;font-size:12px}
+table.ed tr.grp input{background:var(--surface);font-weight:600}
+table.ed .gcab{display:inline-block;font-size:11px;font-weight:600;color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:1px 6px;margin-right:4px}
+table.ed .gn{font-weight:400;color:var(--muted);font-size:12px;margin-left:4px}
+table.ed td.calc{color:var(--ink);font-variant-numeric:tabular-nums;min-width:90px}
+table.ed td.warn-t{color:var(--warn)}
+table.ed input::placeholder{color:var(--muted);opacity:.75}
+table.ed.set{min-width:0}
+table.ed.set td,table.ed.set th{text-align:left}
+table.ed.set th:nth-child(3){width:360px} table.ed.set th:nth-child(4){width:140px} table.ed.set th:nth-child(5){width:40px}
+table.ed.set td:first-child,table.ed.set th:first-child{width:28px}
+table.ed.set input.catin{text-align:left;width:min(320px,100%)}
+table.ed.set input.catname{text-align:left;width:auto;min-width:200px;font-weight:600;background:var(--surface);border:1px solid var(--line);border-radius:5px;padding:3px 6px}
+table.ed.set tr.offrow td{color:var(--muted)}
+table.ed.set tr.offrow td:nth-child(2){text-decoration:line-through}
+.onlbl{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;color:var(--muted);cursor:pointer}
+.xbtn{border:0;background:none;color:var(--muted);font-size:17px;line-height:1;cursor:pointer;padding:2px 6px;border-radius:5px}
+.xbtn:hover{color:var(--bad);background:var(--bad-bg)}
+.bulk{position:sticky;top:0;z-index:3;display:flex;flex-wrap:wrap;gap:8px;align-items:center;background:var(--accent-soft);color:var(--ink);border:1px solid var(--accent);border-radius:10px;padding:8px 12px;margin-bottom:8px}
+.bulk input{min-width:200px}
+.addbox{margin-bottom:10px}
+.freshbox{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:4px 14px;max-height:300px;overflow:auto;border-top:1px solid var(--line);padding-top:8px}
+.fr{display:flex;gap:6px;align-items:center;font-size:13px;cursor:pointer;min-width:0}
+.fr span:nth-child(2){overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fr .nd{color:var(--muted);font-size:11.5px;margin-left:auto;white-space:nowrap}
+.tag-new{font-size:11px;color:var(--warn);background:var(--warn-bg);border-radius:5px;padding:1px 6px;margin-left:4px}
 table.ed td{padding:3px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 table.ed input{width:100%;text-align:right;padding:4px 6px}
 table.ed input.w{width:110px} table.ed input.s{width:72px}
@@ -200,6 +226,7 @@ textarea{width:100%;min-height:120px;font-family:ui-monospace,Menlo,Consolas,mon
       <button type="button" data-tab="history">История</button>
       <button type="button" data-tab="plan">План месяца</button>
       <button type="button" data-tab="upload">Загрузка данных</button>
+      <button type="button" data-tab="settings">Настройки</button>
     </nav>
   </div>
 </header>
@@ -212,6 +239,7 @@ textarea{width:100%;min-height:120px;font-family:ui-monospace,Menlo,Consolas,mon
     <section id="tab-history" hidden></section>
     <section id="tab-plan" hidden></section>
     <section id="tab-upload" hidden></section>
+    <section id="tab-settings" hidden></section>
   </main>
 </div>
 
@@ -285,6 +313,7 @@ const pref = {
 // Данные лежат файлами в отдельном приватном репозитории:
 //   months/2026-10.json        — план месяца
 //   facts/2026-10_01-04.json   — факт периода
+//   settings/catalog.json      — настройки: мои артикулы по кабинетам и их категории
 //   history.csv                — сводка план/факт по месяцам (GitHub показывает её таблицей)
 // Каждое сохранение — коммит, поэтому любая прошлая версия плана видна в истории репозитория.
 const GH_DEFAULT_REPO = 'vladoskosolapovv/ozon-plan-data';
@@ -404,11 +433,11 @@ const GitHubBackend = () => {
     repo: ghConf.repo,
     ping: async () => { const j = await req(''); branch = j.default_branch || 'main'; return 'ok'; },
     load: async (onProgress) => {
-      const out = {months: {}, facts: {}};
+      const out = {months: {}, facts: {}, catalog: null};
       let tree;
       try { tree = await req('/git/trees/' + encodeURIComponent(branch) + '?recursive=1'); }
       catch (e) { if (e.status === 409 || e.status === 404) return out; throw e; } // пустой репозиторий — данных ещё нет
-      const files = (tree.tree || []).filter(x => x.type === 'blob' && /^(months|facts)\/[^/]+\.json$|^history\.csv$/.test(x.path));
+      const files = (tree.tree || []).filter(x => x.type === 'blob' && /^(months|facts)\/[^/]+\.json$|^history\.csv$|^settings\/catalog\.json$/.test(x.path));
       let done = 0;
       const one = async f => {
         shas[f.path] = f.sha;
@@ -421,6 +450,7 @@ const GitHubBackend = () => {
         texts[f.path] = text;
         done++; if (onProgress) onProgress(done, files.length);
         if (f.path === 'history.csv') return;
+        if (f.path === 'settings/catalog.json') { try { out.catalog = JSON.parse(text); } catch (e) { console.warn('Битые настройки'); } return; }
         try {
           const doc = JSON.parse(text);
           const id = f.path.replace(/^(months|facts)\//, '').replace(/\.json$/, '');
@@ -434,7 +464,9 @@ const GitHubBackend = () => {
     deleteMonth: id => delFile(monthPath(id), 'Удалён план: ' + monthLabel(id)),
     saveFact: (id, doc) => putFile(factPath(id), json(doc), 'Факт: ' + factLabel(doc)),
     deleteFact: id => delFile(factPath(id), 'Удалён факт: ' + id),
+    saveCatalog: doc => putFile('settings/catalog.json', json(doc), 'Настройки: артикулы и категории'),
     importAll: async data => {
+      if (data.catalog) await putFile('settings/catalog.json', json(data.catalog), 'Импорт настроек');
       for (const id of Object.keys(data.months || {})) await putFile(monthPath(id), json(data.months[id]), 'Импорт плана: ' + monthLabel(id));
       for (const id of Object.keys(data.facts || {})) await putFile(factPath(id), json(data.facts[id]), 'Импорт факта: ' + factLabel(data.facts[id]));
     },
@@ -464,7 +496,8 @@ const LocalBackend = () => {
     deleteMonth: async id => { const d = read(); delete d.months[id]; write(d); },
     saveFact: async (id, doc) => { const d = read(); d.facts[id] = doc; write(d); },
     deleteFact: async id => { const d = read(); delete d.facts[id]; write(d); },
-    importAll: async data => { const d = read(); Object.assign(d.months, data.months || {}); Object.assign(d.facts, data.facts || {}); write(d); },
+    saveCatalog: async doc => { const d = read(); d.catalog = doc; write(d); },
+    importAll: async data => { const d = read(); Object.assign(d.months, data.months || {}); Object.assign(d.facts, data.facts || {}); if (data.catalog) d.catalog = data.catalog; write(d); },
     saveHistory: async () => {},
     backup: null
   };
@@ -480,7 +513,9 @@ const S = {
   scope: 'month', open: new Set(pref.get('open', [])), q: '',
   draft: null, draftOf: null, dirty: false, planMsg: null, pl: null,
   up: {files: [], parsed: {}, msg: null, period: null, confirmDel: null},
-  sim: {key: null, sc: null}
+  sim: {key: null, sc: null},
+  catalog: null,
+  cat: {draft: null, dirty: false, msg: null, cab: pref.get('setCab', ''), q: '', sel: new Set(), onlyOn: false, parsed: null}
 };
 
 /* ============ периоды месяца: первая неделя до воскресенья, дальше пн–вс ============ */
@@ -498,6 +533,34 @@ function periods(mid) {
   return {list, days};
 }
 
+/* ============ настройки: мои артикулы по кабинетам и категориям ============ */
+// catalog = {cabinets: ['Взрослый', …], items: [{cab, art, cat, on}]}; on=false — артикул не на моём ведении
+function deriveCatalog() {
+  const ids = Object.keys(S.months).sort();
+  const M = ids.length ? S.months[ids[ids.length - 1]] : null;
+  const items = [], seen = new Set();
+  ((M && M.plan) || []).forEach(r => {
+    const k = r.cab + '|' + r.art;
+    if (seen.has(k)) return; seen.add(k);
+    items.push({cab: r.cab, art: r.art, cat: r.cat, on: true});
+  });
+  return {cabinets: M ? (M.cabinets || []).slice() : [], items, derived: true};
+}
+const catalogDoc = () => (S.catalog && Array.isArray(S.catalog.items) ? S.catalog : deriveCatalog());
+function catalogIndex(doc) {
+  doc = doc || catalogDoc();
+  const byKey = {}, byArt = {}, cabs = (doc.cabinets || []).slice(), catOrder = [];
+  doc.items.forEach(it => {
+    byKey[it.cab + '|' + it.art] = it;
+    (byArt[it.art] = byArt[it.art] || []).push(it);
+    if (!cabs.includes(it.cab)) cabs.push(it.cab);
+    const k = it.cab + '|' + it.cat;
+    if (!catOrder.includes(k)) catOrder.push(k);
+  });
+  const isOff = (cab, art) => { const it = byKey[cab + '|' + art]; return !!it && it.on === false; };
+  return {doc, byKey, byArt, cabs, catOrder, isOff};
+}
+
 /* ============ расчёт ============ */
 const Z = () => ({qty: 0, rub: 0, done: 0, bought: 0, sales: 0, sold: 0, cost: 0, profit: 0});
 const addF = (a, b) => { for (const k in a) a[k] += b[k] || 0; return a; };
@@ -511,10 +574,18 @@ function model(mid, mode) {
   const loaded = per.filter(p => F[p.id]).reduce((s, p) => s + p.days, 0);
   const pi = mode === 'margin' ? 4 : 3;
   const scopes = ['month'].concat(per.map(p => p.id));
+  const CI = catalogIndex();
+  // строки плана: категория из настроек, снятые с ведения не считаются, мои артикулы без плана — с нулевым планом
+  const planRows = (M.plan || []).filter(r => !CI.isOff(r.cab, r.art)).map(r => {
+    const it = CI.byKey[r.cab + '|' + r.art];
+    return it && it.cat && it.cat !== r.cat ? Object.assign({}, r, {cat: it.cat}) : r;
+  });
+  const inPlan = new Set(planRows.map(r => r.cab + '|' + r.art));
+  CI.doc.items.forEach(it => { if (it.on !== false && !inPlan.has(it.cab + '|' + it.art)) planRows.push({cab: it.cab, cat: it.cat, art: it.art, qty: 0, rub: 0}); });
   const catMap = {};
   (M.categories || []).forEach(c => { catMap[c.cab + '|' + c.cat] = c; });
   const tot = {}, cnt = {};
-  (M.plan || []).forEach(r => { tot[r.art] = (tot[r.art] || 0) + num(r.rub); cnt[r.art] = (cnt[r.art] || 0) + 1; });
+  planRows.forEach(r => { tot[r.art] = (tot[r.art] || 0) + num(r.rub); cnt[r.art] = (cnt[r.art] || 0) + 1; });
   // себестоимость и выкуп из отчётов — для артикулов, где в плане они не заданы (сначала этот месяц, потом последние отчёты)
   const fu = {cost: {}, buy: {}};
   Object.keys(S.facts).sort((a, b) => (a.startsWith(mid) ? 1 : 0) - (b.startsWith(mid) ? 1 : 0) || a.localeCompare(b)).forEach(id => {
@@ -524,7 +595,7 @@ function model(mid, mode) {
   });
   const hasV = v => v != null && v !== '';
 
-  const rows = (M.plan || []).map(r => {
+  const rows = planRows.map(r => {
     const cc = catMap[r.cab + '|' + r.cat] || {};
     const pick = k => (r[k] != null && r[k] !== '') ? r[k] : cc[k];
     const c = {min: pick('min'), norm: pick('norm'), st: pick('st')};
@@ -547,7 +618,10 @@ function model(mid, mode) {
 
   const catList = (M.categories || []).slice();
   rows.forEach(r => { if (!catMap[r.cab + '|' + r.cat]) { const c = {cab: r.cab, cat: r.cat}; catMap[r.cab + '|' + r.cat] = c; catList.push(c); } });
-  const cats = catList.map(c => {
+  const firstSeen = k => { const i = rows.findIndex(r => r.cab + '|' + r.cat === k); return i < 0 ? 1e9 : i; };
+  const catRank = c => { const k = c.cab + '|' + c.cat, i = CI.catOrder.indexOf(k); return i >= 0 ? i : 1e6 + firstSeen(k); };
+  catList.sort((a, b) => catRank(a) - catRank(b));
+  const cats = catList.filter(c => num(c.target) > 0 || rows.some(r => r.cab === c.cab && r.cat === c.cat)).map(c => {
     const kids = rows.filter(r => r.cab === c.cab && r.cat === c.cat);
     // пороги категории: средние по артикулам с весом плана в ₽ (если пороги у всех одинаковые — те же самые)
     const th = {};
@@ -565,7 +639,8 @@ function model(mid, mode) {
     n.planQty = kids.reduce((a, k) => a + k.planQty, 0);
     return n;
   });
-  const cabOrder = (M.cabinets || []).slice();
+  const cabOrder = CI.cabs.slice();
+  (M.cabinets || []).forEach(c => { if (!cabOrder.includes(c)) cabOrder.push(c); });
   cats.forEach(c => { if (!cabOrder.includes(c.cab)) cabOrder.push(c.cab); });
   const roll = (type, key, kids, extra) => {
     const n = Object.assign({type, key, kids, f: {}}, extra);
@@ -575,10 +650,12 @@ function model(mid, mode) {
     n.planQty = kids.reduce((a, k) => a + k.planQty, 0);
     return n;
   };
-  const cabs = cabOrder.map(cab => roll('cab', cab, cats.filter(c => c.cab === cab), {cab}));
+  const cabs = cabOrder.filter(cab => cats.some(c => c.cab === cab)).map(cab => roll('cab', cab, cats.filter(c => c.cab === cab), {cab}));
   const total = roll('total', 'total', cabs, {});
 
   const planArts = new Set(rows.map(r => r.art));
+  // артикулы, которые только «не на ведении», в «вне плана» не попадают
+  CI.doc.items.forEach(it => { if (it.on === false && !(CI.byArt[it.art] || []).some(x => x.on !== false)) planArts.add(it.art); });
   const out = {type: 'out', key: 'out', f: {}, planRub: 0, planChp: 0};
   scopes.forEach(s => { out.f[s] = Z(); });
   per.forEach(p => {
@@ -650,8 +727,9 @@ function renderAll() {
   setStatus();
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === S.tab));
   document.querySelectorAll('#modeSeg button').forEach(b => b.classList.toggle('on', b.dataset.mode === S.mode));
-  ['tracker', 'sim', 'history', 'plan', 'upload'].forEach(t => { $('#tab-' + t).hidden = t !== S.tab; });
-  ({tracker: renderTracker, sim: renderSim, history: renderHistory, plan: renderPlan, upload: renderUpload})[S.tab]();
+  if (!['tracker', 'sim', 'history', 'plan', 'upload', 'settings'].includes(S.tab)) S.tab = 'tracker';
+  ['tracker', 'sim', 'history', 'plan', 'upload', 'settings'].forEach(t => { $('#tab-' + t).hidden = t !== S.tab; });
+  ({tracker: renderTracker, sim: renderSim, history: renderHistory, plan: renderPlan, upload: renderUpload, settings: renderSettings})[S.tab]();
 }
 
 function noMonth(el) {
@@ -977,7 +1055,39 @@ const pctIn = v => has(v) ? Math.round(num(v) * 1000) / 10 : '';
 
 function ensureDraft() {
   if (!S.mid || !S.months[S.mid]) { S.draft = null; return; }
-  if (!S.dirty || S.draftOf !== S.mid) { S.draft = clone(S.months[S.mid]); S.draftOf = S.mid; S.dirty = false; }
+  if (!S.dirty || S.draftOf !== S.mid) { S.draft = syncDraft(clone(S.months[S.mid])); S.draftOf = S.mid; S.dirty = false; }
+}
+
+/* План месяца приводится к настройкам: категории артикулов — из настроек, мои артикулы без плана добавляются с нулём,
+   ROI артикула, равный ROI категории, считается унаследованным (пустая ячейка), ₽ = цена × шт. Итоговые цифры не меняются. */
+function syncDraft(D) {
+  const CI = catalogIndex();
+  D.plan = D.plan || []; D.categories = D.categories || [];
+  D.plan.forEach(r => { const it = CI.byKey[r.cab + '|' + r.art]; if (it && it.cat) r.cat = it.cat; });
+  const have = new Set(D.plan.map(r => r.cab + '|' + r.art));
+  CI.doc.items.forEach(it => {
+    if (it.on !== false && !have.has(it.cab + '|' + it.art)) D.plan.push({cab: it.cab, cat: it.cat, art: it.art, price: null, qty: 0, rub: 0, min: null, norm: null, st: null});
+  });
+  const ck = new Set(D.categories.map(c => c.cab + '|' + c.cat));
+  D.plan.forEach(r => { const k = r.cab + '|' + r.cat; if (!ck.has(k)) { ck.add(k); D.categories.push({cab: r.cab, cat: r.cat, min: null, norm: null, st: null}); } });
+  ['min', 'norm', 'st'].forEach(k => D.categories.forEach(c => {
+    const kids = D.plan.filter(r => r.cab === c.cab && r.cat === c.cat);
+    if (!has(c[k]) && kids.length && kids.every(r => has(r[k]))) {
+      const vals = [...new Set(kids.map(r => num(r[k])))];
+      if (vals.length === 1) c[k] = vals[0];
+    }
+    if (has(c[k])) kids.forEach(r => { if (has(r[k]) && Math.abs(num(r[k]) - num(c[k])) < 1e-9) r[k] = null; });
+  }));
+  D.plan.forEach(r => { if (has(r.price) && num(r.price) > 0) r.rub = Math.round(num(r.price) * num(r.qty)); });
+  const first = {};
+  D.plan.forEach((r, i) => { const k = r.cab + '|' + r.cat; if (first[k] == null) first[k] = i; });
+  const cabRank = c => { const i = CI.cabs.indexOf(c); return i < 0 ? 1e6 : i; };
+  const catRank = k => { const i = CI.catOrder.indexOf(k); return i < 0 ? 1e6 + first[k] : i; };
+  D.plan = D.plan.map((r, i) => ({r, i})).sort((a, b) => cabRank(a.r.cab) - cabRank(b.r.cab) || catRank(a.r.cab + '|' + a.r.cat) - catRank(b.r.cab + '|' + b.r.cat) || a.i - b.i).map(x => x.r);
+  const used = new Set(D.plan.map(r => r.cab + '|' + r.cat));
+  D.categories = D.categories.filter(c => used.has(c.cab + '|' + c.cat) || num(c.target) > 0);
+  D.cabinets = CI.cabs.filter(c => D.plan.some(r => r.cab === c)).concat([...new Set(D.plan.map(r => r.cab))].filter(c => !CI.cabs.includes(c)));
+  return D;
 }
 
 /* --- чтение Excel с планом --- */
@@ -1001,18 +1111,28 @@ function parsePlan(rows) {
     else if (col.qty == null && /шт|кол-?во|количеств/.test(h)) col.qty = i;
     else if (col.rub == null && /₽|руб|деньг|сумм/.test(h)) col.rub = i;
   });
-  const miss = [['cab', 'Кабинет'], ['cat', 'Категория'], ['art', 'Артикул']].filter(([k]) => col[k] == null).map(x => x[1]);
-  if (miss.length) throw new Error('Нет колонок: ' + miss.join(', ') + '.');
+  const CI = catalogIndex();
   if (col.qty == null && col.rub == null) throw new Error('Нужна хотя бы одна из колонок «План заказов, шт» или «План заказов, ₽».');
-  const out = [], warn = [];
-  let cab = '', cat = '';
+  const out = [], warn = [], catDiff = [], fresh = [];
+  let cab0 = '', cat0 = '';
   rows.slice(hi + 1).forEach((r, k) => {
     r = r || [];
     const art = String(r[col.art] ?? '').trim();
-    if (has(r[col.cab]) && String(r[col.cab]).trim()) cab = String(r[col.cab]).trim();
-    if (has(r[col.cat]) && String(r[col.cat]).trim()) cat = String(r[col.cat]).trim();
+    const cell = c => col[c] != null && has(r[col[c]]) ? String(r[col[c]]).trim() : '';
+    if (cell('cab')) cab0 = cell('cab');
+    if (cell('cat')) cat0 = cell('cat');
     if (!art || /^итог/i.test(art)) return;
-    if (!cab || !cat) { warn.push(`строка ${hi + k + 2}: нет кабинета или категории у «${art}»`); return; }
+    // кабинет: из файла, иначе из настроек (если артикул там в одном кабинете)
+    let cab = col.cab != null ? cab0 : '';
+    const known = CI.byArt[art] || [];
+    if (!cab && known.length === 1) cab = known[0].cab;
+    if (!cab) { warn.push(`строка ${hi + k + 2}: у «${art}» не указан кабинет` + (known.length > 1 ? ' (артикул есть в нескольких кабинетах)' : '')); return; }
+    // категория: из настроек, иначе из файла
+    const it = CI.byKey[cab + '|' + art];
+    const fileCat = col.cat != null ? cat0 : '';
+    const cat = it && it.cat ? it.cat : fileCat || 'Без категории';
+    if (it && fileCat && fileCat !== it.cat) catDiff.push(`${art}: в файле «${fileCat}», в настройках «${it.cat}»`);
+    if (!it) fresh.push({cab, art, cat});
     const g = c => col[c] == null || !has(r[col[c]]) ? null : num(r[col[c]]);
     out.push({cab, cat, art, price: g('price'), qty: g('qty'), rub: g('rub'), min: g('min'), norm: g('norm'), st: g('st')});
   });
@@ -1031,7 +1151,8 @@ function parsePlan(rows) {
   out.forEach(x => { const key = x.cab + '|' + x.art; if (seen.has(key)) dup.push(x.art + ' (' + x.cab + ')'); seen.add(key); });
   if (dup.length) warn.push('артикул повторяется в одном кабинете: ' + dup.slice(0, 6).join(', ') + (dup.length > 6 ? '…' : '') + ' — строки сложатся как разные позиции');
   if (!out.length) throw new Error('В файле нет строк с артикулами.');
-  return {rows: out, warn};
+  if (catDiff.length) warn.push('категория взята из настроек: ' + catDiff.slice(0, 5).join('; ') + (catDiff.length > 5 ? ` и ещё ${catDiff.length - 5}` : ''));
+  return {rows: out, warn, fresh};
 }
 
 /* себестоимость и выкуп: из этого месяца, из других месяцев, из последних отчётов */
@@ -1078,18 +1199,43 @@ function buildPlanDoc(parsed, mid) {
     categories.push({cab: r.cab, cat: r.cat, min: has(first.min) ? first.min : old.min ?? null, norm: has(first.norm) ? first.norm : old.norm ?? null, st: has(first.st) ? first.st : old.st ?? null,
       target: old.target ?? null, buy: old.buy ?? null, cshare: old.cshare ?? null, note: old.note || ''});
   });
-  return {cabinets, categories, plan, copiedFrom: base.copiedFrom || null, source: 'Excel: ' + (S.pl && S.pl.name || '')};
+  return syncDraft({cabinets, categories, plan, copiedFrom: base.copiedFrom || null, source: 'Excel: ' + (S.pl && S.pl.name || '')});
+}
+
+/* новые артикулы из плана — в настройки (настройки при этом создаются, если их ещё не было) */
+async function addToCatalog(items) {
+  const doc = clone(catalogDoc()); delete doc.derived;
+  const have = new Set(doc.items.map(it => it.cab + '|' + it.art));
+  const add = items.filter(it => !have.has(it.cab + '|' + it.art));
+  if (!add.length && S.catalog) return 0;
+  add.forEach(it => { doc.items.push({cab: it.cab, art: it.art, cat: it.cat, on: true}); if (!doc.cabinets.includes(it.cab)) doc.cabinets.push(it.cab); });
+  await Backend.saveCatalog(doc);
+  S.catalog = doc; S.cat.draft = null; S.cat.dirty = false;
+  return add.length;
 }
 
 /* --- выгрузка плана в Excel (xlsx собирается в браузере) --- */
-// Apps Script вырезает «//» из шаблонных строк в обратных кавычках, поэтому адреса собираем из частей в обычных кавычках
-const NS_MAIN = 'http:/' + '/schemas.openxmlformats.org/spreadsheetml/2006/main';
+const NS_MAIN = 'http://schemas.openxmlformats.org/spreadsheetml/2006/main';
 const XMLH = '<' + '?xml version="1.0" encoding="UTF-8" standalone="yes"?' + '>';
 async function exportPlanXlsx(mid) {
-  const D = S.draftOf === mid && S.draft ? S.draft : S.months[mid];
-  if (!D) return;
+  const src = S.draftOf === mid && S.draft ? S.draft : S.months[mid];
+  if (!src) return;
+  const D = syncDraft(clone(src));
+  const CIx = catalogIndex();
+  D.plan = D.plan.filter(r => !CIx.isOff(r.cab, r.art));
   const cats = {};
   (D.categories || []).forEach(c => { cats[c.cab + '|' + c.cat] = c; });
+  const rows = D.plan.map(r => {
+    const c = cats[r.cab + '|' + r.cat] || {};
+    const th = key => has(r[key]) ? num(r[key]) : has(c[key]) ? num(c[key]) : null;
+    const price = has(r.price) && num(r.price) ? num(r.price) : (num(r.qty) > 0 && num(r.rub) > 0 ? Math.round(num(r.rub) / num(r.qty)) : null);
+    return [r.cab, r.cat, r.art, price, num(r.qty) || null, num(r.rub) || null, th('min'), th('norm'), th('st')];
+  });
+  await downloadXlsx('plan-' + mid + '.xlsx', 'План месяца', PLAN_COLS, rows, [13, 24, 30, 14, 13, 16, 12, 12, 12], [0, 0, 0, 2, 2, 2, 3, 3, 3]);
+}
+
+/* xlsx собирается в браузере: заголовок жирным, числа с разделителями (2), проценты (3) */
+async function downloadXlsx(fileName, sheetName, head, rows, widths, styles) {
   const x = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
   const ref = (c, r) => String.fromCharCode(65 + c) + r;
   const cell = (c, r, v, st) => {
@@ -1097,29 +1243,22 @@ async function exportPlanXlsx(mid) {
     if (typeof v === 'number' && isFinite(v)) return `<c r="${ref(c, r)}" s="${st}"><v>${v}</v></c>`;
     return `<c r="${ref(c, r)}" t="inlineStr" s="${st}"><is><t>${x(v)}</t></is></c>`;
   };
-  let rowsXml = `<row r="1">${PLAN_COLS.map((h, i) => cell(i, 1, h, 1)).join('')}</row>`;
-  (D.plan || []).forEach((r, k) => {
-    const c = cats[r.cab + '|' + r.cat] || {};
-    const th = key => has(r[key]) ? num(r[key]) : has(c[key]) ? num(c[key]) : null;
-    const price = has(r.price) && num(r.price) ? num(r.price) : (num(r.qty) > 0 && num(r.rub) > 0 ? Math.round(num(r.rub) / num(r.qty)) : null);
-    const n = k + 2;
-    rowsXml += `<row r="${n}">${[r.cab, r.cat, r.art].map((v, i) => cell(i, n, v, 0)).join('')}${cell(3, n, price, 2)}${cell(4, n, num(r.qty) || null, 2)}${cell(5, n, num(r.rub) || null, 2)}${['min', 'norm', 'st'].map((key, i) => cell(6 + i, n, th(key), 3)).join('')}</row>`;
-  });
-  const widths = [13, 24, 30, 14, 13, 16, 12, 12, 12];
+  let rowsXml = `<row r="1">${head.map((h, i) => cell(i, 1, h, 1)).join('')}</row>`;
+  rows.forEach((r, k) => { const n = k + 2; rowsXml += `<row r="${n}">${r.map((v, i) => cell(i, n, v, styles[i] || 0)).join('')}</row>`; });
   const sheet = `${XMLH}<worksheet xmlns="${NS_MAIN}"><sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews><cols>${widths.map((w, i) => `<col min="${i + 1}" max="${i + 1}" width="${w}" customWidth="1"/>`).join('')}</cols><sheetData>${rowsXml}</sheetData></worksheet>`;
-  const styles = `${XMLH}<styleSheet xmlns="${NS_MAIN}"><fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="9" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+  const stylesXml = `${XMLH}<styleSheet xmlns="${NS_MAIN}"><fonts count="2"><font><sz val="10"/><name val="Arial"/></font><font><b/><sz val="10"/><name val="Arial"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="4"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/><xf numFmtId="3" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/><xf numFmtId="9" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
   await ensureJSZip();
   const zip = new JSZip();
   zip.file('[Content_Types].xml', XMLH + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>');
   zip.file('_rels/.rels', XMLH + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>');
-  zip.file('xl/workbook.xml', XMLH + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="План месяца" sheetId="1" r:id="rId1"/></sheets></workbook>');
+  zip.file('xl/workbook.xml', XMLH + `<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="${x(sheetName)}" sheetId="1" r:id="rId1"/></sheets></workbook>`);
   zip.file('xl/_rels/workbook.xml.rels', XMLH + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
   zip.file('xl/worksheets/sheet1.xml', sheet);
-  zip.file('xl/styles.xml', styles);
+  zip.file('xl/styles.xml', stylesXml);
   const blob = await zip.generateAsync({type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'plan-' + mid + '.xlsx';
+  a.download = fileName;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
@@ -1151,6 +1290,7 @@ function planPreview() {
     ${exists && removed.length ? `<p class="hint">Уйдут из плана (${removed.length}): ${list(removed, 12)}</p>` : ''}
     ${noCost.length ? `<p class="hint">Пока нет себестоимости у ${noCost.length}: ${list(noCost, 10)}. Она подтянется из отчёта «Unit экономика», когда загрузите его за любой период, или впишите её в таблице ниже. До этого ЧП плана по ним 0.</p>` : ''}
     ${noRoi ? `<p class="hint">У ${noRoi} строк не задана норма ROI, возьмётся норма категории.</p>` : ''}
+    ${(pl.parsed.fresh || []).length ? `<p class="hint">Нет в настройках (${pl.parsed.fresh.length}), будут добавлены туда при сохранении: ${list(pl.parsed.fresh.map(x => x.art + ' → ' + x.cat), 10)}</p>` : ''}
     ${pl.parsed.warn.length ? `<p class="hint">Замечания: ${esc(pl.parsed.warn.join('; '))}</p>` : ''}
     <div class="bar">
       <button type="button" class="btn primary" id="plSave">Сохранить план в ${monthLabel(mid).toLowerCase()}</button>
@@ -1172,7 +1312,7 @@ function renderPlan() {
         <label class="btn primary" for="plFile" style="display:inline-block">Загрузить план из Excel</label><input type="file" id="plFile" accept=".xlsx" hidden>
         <button type="button" class="btn" id="plOut"${S.mid ? '' : ' disabled'}>Выгрузить ${S.mid ? monthLabel(S.mid).toLowerCase() : 'план'} в Excel</button>
       </div>
-      <p class="hint" style="margin:8px 0 0">Колонки: ${PLAN_COLS.map(esc).join(' · ')}. Из цены, штук и рублей достаточно двух. ROI можно писать как 120% или 120. Себестоимость и выкуп подтянутся из прошлого плана и загруженных отчётов. Следующий месяц удобно делать так: выгрузить текущий в Excel, поправить, загрузить в новый месяц.</p>
+      <p class="hint" style="margin:8px 0 0">Колонки: ${PLAN_COLS.map(esc).join(' · ')}. Из цены, штук и рублей достаточно двух. Кабинет и категорию можно не заполнять у артикулов из «Настроек» — категория всегда берётся оттуда. ROI можно писать как 120% или 120. Себестоимость и выкуп подтянутся из прошлого плана и загруженных отчётов. Следующий месяц удобно делать так: выгрузить текущий в Excel, поправить, загрузить в новый месяц.</p>
       ${planPreview()}
     </div>`;
   const tools = `
@@ -1180,49 +1320,49 @@ function renderPlan() {
       <div class="bar" style="margin:0">
         <label class="ctl" for="newMonth">Новый месяц без Excel</label><input type="month" id="newMonth" value="${nextMonthId(S.mid)}">
         <button type="button" class="btn" id="mkCopy"${S.mid ? '' : ' disabled'}>Создать по образцу ${S.mid ? monthLabel(S.mid).toLowerCase() : ''}</button>
-        <span class="spacer"></span>
-        <button type="button" class="btn" id="expJson">Экспорт всех данных</button>
-        <label class="btn" for="impJson" style="display:inline-block">Импорт данных</label><input type="file" id="impJson" accept=".json,application/json" hidden>
-        <button type="button" class="btn" id="ghSetup">${Backend.kind === 'github' ? 'Сменить ключ GitHub' : 'Подключить GitHub'}</button>
+        <button type="button" class="btn" id="mkEmpty">Создать пустой</button>
       </div>
-      <p class="hint" style="margin:8px 0 0">Экспорт сохраняет все месяцы и весь факт одним JSON-файлом, импорт возвращает их обратно. ${Backend.kind === 'github' ? `Данные хранятся в репозитории <b>${esc(Backend.repo)}</b>, каждое сохранение — отдельная версия.` : ''}</p>
+      <p class="hint" style="margin:8px 0 0">«По образцу» копирует план целиком. «Пустой» берёт все ваши артикулы из «Настроек» с нулевым планом и ROI категорий из ${S.mid ? monthLabel(S.mid).toLowerCase() : 'последнего месяца'} — дальше вписываете цену и штуки прямо здесь. Экспорт и импорт данных — во вкладке «Настройки».</p>
     </div>`;
   if (!S.draft) { el.innerHTML = msg + xl + tools + '<div class="empty card" style="margin-top:10px"><b>Месяц не выбран</b>Загрузите план из Excel или импортируйте файл с данными.</div>'; return; }
   const D = S.draft;
-  const pIn = (k, v, cls, lbl) => `<input class="${cls}" data-k="${k}" data-pct="1" value="${pctIn(v)}" aria-label="${lbl}">`;
-  const catRows = (D.categories || []).map((c, i) => `<tr>
-    <td>${esc(c.cab)}</td><td>${esc(c.cat)}</td>
-    <td>${pIn('c.' + i + '.min', c.min, 's', 'Порог ROI категории')}</td>
-    <td>${pIn('c.' + i + '.norm', c.norm, 's', 'Норма ROI категории')}</td>
-    <td>${pIn('c.' + i + '.st', c.st, 's', 'Сверх ROI категории')}</td>
-    <td><input class="w" data-k="c.${i}.target" value="${has(c.target) ? c.target : ''}" aria-label="Цель категории"></td>
-    <td>${pIn('c.' + i + '.buy', c.buy, 's', 'Выкуп категории')}</td>
-    <td>${pIn('c.' + i + '.cshare', c.cshare, 's', 'Себестоимость в цене')}</td>
-    <td style="text-align:left;color:var(--muted)">${esc(c.note || '')}</td></tr>`).join('');
-  const catOf = {};
-  (D.categories || []).forEach(c => { catOf[c.cab + '|' + c.cat] = c; });
+  const CI = catalogIndex();
+  const pIn = (k, v, lbl, ph) => `<input class="s" data-k="${k}" data-pct="1" value="${pctIn(v)}" placeholder="${ph != null ? ph : ''}" aria-label="${lbl}" inputmode="decimal">`;
+  const catIdx = {};
+  D.categories.forEach((c, i) => { catIdx[c.cab + '|' + c.cat] = i; });
   const fb = {};
   if (MD && MD.mid === S.mid) MD.rows.forEach(n => { fb[n.cab + '|' + n.art] = n; });
-  let last = '';
-  const artRows = (D.plan || []).map((r, i) => {
-    const g = r.cab + '|' + r.cat, c = catOf[g] || {};
-    const head = g !== last ? `<tr class="grp"><td colspan="11">${esc(r.cab)} · ${esc(r.cat)}</td></tr>` : '';
-    last = g;
-    const norm = has(r.norm) ? num(r.norm) : num(c.norm);
+  const off = D.plan.filter(r => CI.isOff(r.cab, r.art)).length;
+  let last = '', gi = -1, body = '';
+  D.plan.forEach((r, i) => {
+    if (CI.isOff(r.cab, r.art)) return;
+    const g = r.cab + '|' + r.cat;
+    if (g !== last) {
+      last = g; gi++;
+      const ci = catIdx[g], c = D.categories[ci];
+      const n = D.plan.filter(x => x.cab + '|' + x.cat === g && !CI.isOff(x.cab, x.art)).length;
+      body += `<tr class="grp" data-g="${esc(g)}">
+        <td><span class="gcab">${esc(r.cab)}</span> ${esc(r.cat)} <span class="gn">${n} арт.</span></td>
+        <td class="gl">ROI категории →</td><td class="n" id="gq${gi}"></td><td class="n" id="gr${gi}"></td>
+        <td>${pIn('c.' + ci + '.min', c.min, 'Пороговая ROI категории ' + r.cat)}</td>
+        <td>${pIn('c.' + ci + '.norm', c.norm, 'Норм ROI категории ' + r.cat)}</td>
+        <td>${pIn('c.' + ci + '.st', c.st, 'Сверх ROI категории ' + r.cat)}</td>
+        <td></td><td></td><td class="n" id="gc${gi}"></td></tr>`;
+    }
+    const c = D.categories[catIdx[g]] || {};
     const f = fb[r.cab + '|' + r.art] || {};
-    const cost = has(r.cost) ? num(r.cost) : (f.planCost || 0), buy = has(r.buy) && !r.buyGuess ? num(r.buy) : (f.planBuy || num(r.buy));
-    const chp = num(r.qty) * buy * cost * norm;
-    return head + `<tr><td>${esc(r.art)}</td><td style="color:var(--muted)">${esc(r.cab)}</td>
-      <td><input class="w" data-k="p.${i}.price" value="${has(r.price) ? r.price : ''}" aria-label="Плановая цена"></td>
-      <td><input class="w" data-k="p.${i}.qty" value="${num(r.qty)}" aria-label="План шт"></td>
-      <td><input class="w" data-k="p.${i}.rub" value="${num(r.rub)}" aria-label="План рубли"></td>
-      <td>${pIn('p.' + i + '.min', r.min, 's', 'Пороговая ROI')}</td>
-      <td>${pIn('p.' + i + '.norm', r.norm, 's', 'Норм ROI')}</td>
-      <td>${pIn('p.' + i + '.st', r.st, 's', 'Сверх ROI')}</td>
-      <td><input class="w" data-k="p.${i}.cost" value="${has(r.cost) ? r.cost : ''}" placeholder="${!has(r.cost) && f.planCost ? Math.round(f.planCost) : ''}" title="${!has(r.cost) && f.planCost ? 'Из отчёта: ' + Math.round(f.planCost) + ' ₽' : ''}" aria-label="Себестоимость"${has(r.cost) ? '' : ' style="background:var(--warn-bg)"'}></td>
-      <td>${pIn('p.' + i + '.buy', r.buy, 's', 'Выкуп')}</td>
-      <td class="n" id="chp${i}">${R(chp)}</td></tr>`;
-  }).join('');
+    const inCat = CI.byKey[r.cab + '|' + r.art] ? '' : ' <span class="tag-new" title="Артикула нет в настройках">нет в настройках</span>';
+    body += `<tr data-i="${i}" data-gi="${gi}"><td>${esc(r.art)}${inCat}</td>
+      <td><input class="w" data-k="p.${i}.price" value="${has(r.price) ? r.price : ''}" aria-label="Плановая цена ${esc(r.art)}" inputmode="decimal"></td>
+      <td><input class="w" data-k="p.${i}.qty" value="${num(r.qty) || ''}" placeholder="0" aria-label="План шт ${esc(r.art)}" inputmode="decimal"></td>
+      <td class="n calc" id="rb${i}"></td>
+      <td>${pIn('p.' + i + '.min', r.min, 'Пороговая ROI ' + r.art, pctIn(c.min))}</td>
+      <td>${pIn('p.' + i + '.norm', r.norm, 'Норм ROI ' + r.art, pctIn(c.norm))}</td>
+      <td>${pIn('p.' + i + '.st', r.st, 'Сверх ROI ' + r.art, pctIn(c.st))}</td>
+      <td><input class="w" data-k="p.${i}.cost" value="${has(r.cost) ? r.cost : ''}" placeholder="${!has(r.cost) && f.planCost ? Math.round(f.planCost) : ''}" title="${!has(r.cost) && f.planCost ? 'Из отчёта: ' + Math.round(f.planCost) + ' ₽' : ''}" aria-label="Себестоимость ${esc(r.art)}"${has(r.cost) || f.planCost ? '' : ' style="background:var(--warn-bg)"'} inputmode="decimal"></td>
+      <td>${pIn('p.' + i + '.buy', r.buyGuess ? null : r.buy, 'Выкуп ' + r.art, f.planBuy ? pctIn(f.planBuy) : pctIn(r.buy))}</td>
+      <td class="n calc" id="chp${i}"></td></tr>`;
+  });
   el.innerHTML = msg + xl + tools + `
     <div class="bar" style="margin-top:14px">
       <h2 style="margin:0">${monthLabel(S.mid)}</h2><span class="spacer"></span>
@@ -1230,12 +1370,48 @@ function renderPlan() {
       <button type="button" class="btn" id="planUndo"${S.dirty ? '' : ' disabled'}>Отменить</button>
       <button type="button" class="btn primary" id="planSave"${S.dirty ? '' : ' disabled'}>Сохранить план</button>
     </div>
-    <h2>План по артикулам</h2>
-    <p class="hint">ROI = ЧП / себестоимость продаж. Пустой ROI у артикула берётся из категории. ЧП план = шт × выкуп × себестоимость × норм ROI. Пустая себестоимость (подсвечена) и выкуп берутся из последних загруженных отчётов.</p>
-    <div class="edbox"><table class="ed"><thead><tr><th>Артикул</th><th>Кабинет</th><th>Цена, ₽</th><th>План, шт</th><th>План, ₽</th><th>Порог ROI, %</th><th>Норм ROI, %</th><th>Сверх ROI, %</th><th>С/с, ₽/шт</th><th>Выкуп, %</th><th>ЧП план, ₽</th></tr></thead><tbody>${artRows}</tbody></table></div>
-    <h2>Категории</h2>
-    <p class="hint">ROI категории — значение по умолчанию для артикулов без своего. Цель категории в ₽ работает, только если по её артикулам нет плана (тогда ЧП план = цель × выкуп × доля себестоимости в цене × норма).</p>
-    <div class="edbox"><table class="ed"><thead><tr><th>Кабинет</th><th>Категория</th><th>Порог, %</th><th>Норма, %</th><th>Сверх, %</th><th>Цель, ₽/мес</th><th>Выкуп, %</th><th>С/с в цене, %</th><th style="text-align:left">Примечание</th></tr></thead><tbody>${catRows}</tbody></table></div>`;
+    <div class="base" id="planTot"></div>
+    <p class="hint">Вводите цену и план в штуках — план в ₽ и ЧП считаются сами. ROI задаётся в строке категории и действует на все её артикулы;
+      у отдельного артикула можно вписать своё значение, пустая ячейка = ROI категории (серым). ЧП план = шт × выкуп × себестоимость × норм ROI.
+      Пустые себестоимость и выкуп берутся из последних отчётов. Состав артикулов и категорий меняется во вкладке «Настройки».${off ? ` Снято с ведения и не входит в план: ${off}.` : ''}</p>
+    <div class="edbox"><table class="ed plan"><thead><tr><th>Артикул</th><th>Цена, ₽</th><th>План, шт</th><th>План, ₽</th><th>Порог ROI, %</th><th>Норм ROI, %</th><th>Сверх ROI, %</th><th>С/с, ₽/шт</th><th>Выкуп, %</th><th>ЧП план, ₽</th></tr></thead><tbody>${body}</tbody></table></div>`;
+  planCalc();
+}
+
+/* живой пересчёт: ₽ = цена × шт, ЧП = шт × выкуп × себестоимость × норм ROI (артикула или категории) */
+function planCalc() {
+  const D = S.draft; if (!D) return;
+  const CI = catalogIndex();
+  const cm = {};
+  D.categories.forEach(c => { cm[c.cab + '|' + c.cat] = c; });
+  const fb = {};
+  if (MD && MD.mid === S.mid) MD.rows.forEach(n => { fb[n.cab + '|' + n.art] = n; });
+  const G = {}, T = {qty: 0, rub: 0, chp: 0, base: 0};
+  D.plan.forEach((r, i) => {
+    if (CI.isOff(r.cab, r.art)) return;
+    const c = cm[r.cab + '|' + r.cat] || {}, f = fb[r.cab + '|' + r.art] || {};
+    if (has(r.price) && num(r.price) > 0) r.rub = Math.round(num(r.price) * num(r.qty));
+    const norm = has(r.norm) ? num(r.norm) : num(c.norm);
+    const cost = has(r.cost) ? num(r.cost) : (f.planCost || 0);
+    const buy = has(r.buy) && !r.buyGuess ? num(r.buy) : (f.planBuy || num(r.buy));
+    const base = num(r.qty) * buy * cost, chp = base * norm;
+    const tr = document.querySelector(`tr[data-i="${i}"]`);
+    const gi = tr ? tr.dataset.gi : null;
+    const rb = document.getElementById('rb' + i), ch = document.getElementById('chp' + i);
+    if (rb) { rb.textContent = num(r.rub) ? R(r.rub) : (num(r.qty) && !has(r.price) ? 'нет цены' : '–'); rb.classList.toggle('warn-t', !!num(r.qty) && !has(r.price) && !num(r.rub)); }
+    if (ch) ch.textContent = chp ? R(chp) : '–';
+    if (gi != null) { const g = G[gi] = G[gi] || {qty: 0, rub: 0, chp: 0}; g.qty += num(r.qty); g.rub += num(r.rub); g.chp += chp; }
+    T.qty += num(r.qty); T.rub += num(r.rub); T.chp += chp; T.base += base;
+  });
+  Object.keys(G).forEach(gi => {
+    const set = (id, v, sfx) => { const e = document.getElementById(id + gi); if (e) e.textContent = v ? R(v) + (sfx || '') : '–'; };
+    set('gq', G[gi].qty, ' шт'); set('gr', G[gi].rub, ' ₽'); set('gc', G[gi].chp, ' ₽');
+  });
+  const tot = document.getElementById('planTot');
+  if (tot) tot.innerHTML = `<div><b>${R(T.qty)} шт</b><span>план заказов</span></div>
+    <div><b>${MN(T.rub)} ₽</b><span>план заказов</span></div>
+    <div><b>${MN(T.chp)} ₽</b><span>план ЧП</span></div>
+    <div><b>${T.base ? P(T.chp / T.base) : '–'}</b><span>ROI плана (средний)</span></div>`;
 }
 
 function planSetDirty() {
@@ -1270,6 +1446,304 @@ async function handlePlanFile(file) {
     S.planMsg = {t: 'err', html: 'План не прочитан: ' + esc(e.message)};
   }
   renderPlan();
+}
+
+/* ============ НАСТРОЙКИ: мои артикулы ============ */
+const SET_COLS = ['Кабинет', 'Категория', 'Артикул', 'На ведении'];
+
+function catDraft() {
+  const C = S.cat;
+  if (!C.draft) {
+    const d = clone(catalogDoc());
+    C.derived = !!d.derived; delete d.derived;
+    d.cabinets = d.cabinets || [];
+    C.draft = d; C.dirty = C.derived && d.items.length > 0; C.sel = new Set();
+  }
+  return C.draft;
+}
+function catSetDirty() {
+  S.cat.dirty = true;
+  const n = $('#setDirty'); if (n) n.textContent = 'Есть несохранённые изменения';
+  ['#setSave', '#setUndo'].forEach(id => { const b = $(id); if (b) b.disabled = false; });
+}
+const catCabs = d => { const c = (d.cabinets || []).slice(); d.items.forEach(it => { if (!c.includes(it.cab)) c.push(it.cab); }); return c; };
+
+// артикулы из загруженных отчётов, которых нет в настройках
+function reportArts(d) {
+  const known = new Set(d.items.map(it => it.art));
+  const seen = {};
+  Object.keys(S.facts).sort().forEach(id => {
+    const f = S.facts[id];
+    for (const a in (f.o || {})) { const o = f.o[a]; seen[a] = seen[a] || {rub: 0}; seen[a].rub += o[1] || 0; }
+    for (const a in (f.p || {})) { seen[a] = seen[a] || {rub: 0}; }
+  });
+  return Object.keys(seen).filter(a => !known.has(a)).map(a => ({art: a, rub: seen[a].rub})).sort((a, b) => b.rub - a.rub);
+}
+
+function bulkHtml() {
+  const C = S.cat, d = catDraft(), nSel = C.sel.size;
+  if (!nSel) return '';
+  const cats = [...new Set(d.items.filter(it => !C.cab || it.cab === C.cab).map(it => it.cat).filter(Boolean))];
+  return `<div class="bulk">Выбрано: <b>${nSel}</b>
+      <input id="bulkCat" list="dlbulk" placeholder="Новая категория" aria-label="Категория для выбранных">
+      <datalist id="dlbulk">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
+      <button type="button" class="btn primary" id="bulkSetCat">Задать категорию</button>
+      <button type="button" class="btn" id="bulkOn">На ведении</button>
+      <button type="button" class="btn" id="bulkOff">Снять с ведения</button>
+      <button type="button" class="btn danger" id="bulkRm">Убрать из списка</button>
+      <button type="button" class="linkbtn" id="bulkClear">снять выделение</button></div>`;
+}
+function updateBulk() {
+  const w = $('#bulkWrap'); if (w) w.innerHTML = bulkHtml();
+  document.querySelectorAll('input[data-selg]').forEach(g => {
+    const kids = [...document.querySelectorAll('input[data-sel]')].filter(x => x.dataset.g === g.dataset.selg);
+    g.checked = kids.length > 0 && kids.every(x => x.checked);
+  });
+}
+
+function renderSettings() {
+  const el = $('#tab-settings');
+  const box = el.querySelector('.edbox'), keepTop = box ? box.scrollTop : 0, keepY = window.scrollY;
+  const d = catDraft(), C = S.cat;
+  const cabs = catCabs(d);
+  if (C.cab && !cabs.includes(C.cab)) C.cab = '';
+  const q = C.q.trim().toLowerCase();
+  const vis = d.items.map((it, i) => ({it, i})).filter(({it}) =>
+    (!C.cab || it.cab === C.cab) && (C.status === 'on' ? it.on !== false : C.status === 'off' ? it.on === false : true) &&
+    (!q || it.art.toLowerCase().includes(q) || String(it.cat || '').toLowerCase().includes(q)));
+  // порядок: кабинет → категория (как впервые встречается) → как в списке
+  const catOrder = [];
+  d.items.forEach(it => { const k = it.cab + '|' + it.cat; if (!catOrder.includes(k)) catOrder.push(k); });
+  vis.sort((a, b) => cabs.indexOf(a.it.cab) - cabs.indexOf(b.it.cab) || catOrder.indexOf(a.it.cab + '|' + a.it.cat) - catOrder.indexOf(b.it.cab + '|' + b.it.cat) || a.i - b.i);
+  const catsOf = cab => [...new Set(d.items.filter(it => it.cab === cab).map(it => it.cat).filter(Boolean))];
+  const lists = cabs.map((cab, k) => `<datalist id="dlc${k}">${catsOf(cab).map(c => `<option value="${esc(c)}">`).join('')}</datalist>`).join('') +
+    `<datalist id="dlcab">${cabs.map(c => `<option value="${esc(c)}">`).join('')}</datalist>`;
+  const dl = cab => 'dlc' + Math.max(0, cabs.indexOf(cab));
+  const cnt = cab => d.items.filter(it => (!cab || it.cab === cab) && it.on !== false).length;
+  const chips = [`<button type="button" class="chip${C.cab ? '' : ' on'}" data-setcab="">Все <span class="nd">${cnt('')}</span></button>`]
+    .concat(cabs.map(c => `<button type="button" class="chip${C.cab === c ? ' on' : ''}" data-setcab="${esc(c)}">${esc(c)} <span class="nd">${cnt(c)}</span></button>`)).join('');
+  let last = '', body = '';
+  vis.forEach(({it, i}) => {
+    const g = it.cab + '|' + it.cat;
+    if (g !== last) {
+      last = g;
+      const kids = vis.filter(x => x.it.cab + '|' + x.it.cat === g);
+      const allSel = kids.every(x => C.sel.has(x.i));
+      body += `<tr class="grp"><td><input type="checkbox" data-selg="${esc(g)}"${allSel ? ' checked' : ''} aria-label="Выбрать всю категорию"></td>
+        <td colspan="2"><span class="gcab">${esc(it.cab)}</span> <input class="catname" data-rencat="${esc(g)}" value="${esc(it.cat || '')}" aria-label="Название категории" title="Переименовать категорию для всех её артикулов"><span class="gn">${kids.length} арт.</span></td>
+        <td colspan="2"></td></tr>`;
+    }
+    body += `<tr class="${it.on === false ? 'offrow' : ''}"><td><input type="checkbox" data-sel="${i}" data-g="${esc(g)}"${C.sel.has(i) ? ' checked' : ''} aria-label="Выбрать ${esc(it.art)}"></td>
+      <td>${esc(it.art)}</td>
+      <td><input class="catin" data-it="${i}.cat" list="${dl(it.cab)}" value="${esc(it.cat || '')}" aria-label="Категория ${esc(it.art)}"></td>
+      <td><label class="onlbl"><input type="checkbox" data-it="${i}.on"${it.on !== false ? ' checked' : ''}> на ведении</label></td>
+      <td><button type="button" class="xbtn" data-rm="${i}" title="Убрать из списка" aria-label="Убрать ${esc(it.art)}">×</button></td></tr>`;
+  });
+  const bulk = `<div id="bulkWrap">${bulkHtml()}</div>`;
+  const fresh = reportArts(d);
+  const freshCard = fresh.length ? `<div class="card" style="margin-top:12px">
+      <h2 style="margin-top:0">В отчётах есть артикулы не из списка: ${fresh.length}</h2>
+      <p class="hint" style="margin-top:0">Отметьте свои, выберите кабинет и категорию и добавьте. Чужие можно отметить как «не мои» — они перестанут попадать в «Артикулы вне плана».</p>
+      <div class="bar"><label class="ctl" for="frCab">Кабинет</label><select id="frCab">${cabs.map(c => `<option${c === C.cab ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select>
+        <label class="ctl" for="frCat">Категория</label><input id="frCat" list="dlall2" placeholder="например, КВК 50х80 и большие"><datalist id="dlall2">${[...new Set(d.items.map(it => it.cat).filter(Boolean))].map(c => `<option value="${esc(c)}">`).join('')}</datalist>
+        <button type="button" class="btn primary" id="frAdd">Добавить отмеченные как мои</button>
+        <button type="button" class="btn" id="frOff">Отметить как не мои</button>
+        <button type="button" class="linkbtn" id="frAll">отметить все</button></div>
+      <div class="freshbox">${fresh.slice(0, 300).map(x => `<label class="fr"><input type="checkbox" data-fr="${esc(x.art)}"> <span>${esc(x.art)}</span> <span class="nd">${x.rub ? MN(x.rub) + ' ₽' : ''}</span></label>`).join('')}</div>
+    </div>` : '';
+  const msg = C.msg ? `<div class="msg ${C.msg.t}">${C.msg.html}</div>` : '';
+  el.innerHTML = msg + `
+    <div class="bar" style="margin-top:4px">
+      <h2 style="margin:0">Мои артикулы</h2><span class="spacer"></span>
+      <span class="hint" id="setDirty">${C.dirty ? 'Есть несохранённые изменения' : 'Изменений нет'}</span>
+      <button type="button" class="btn" id="setUndo"${C.dirty ? '' : ' disabled'}>Отменить</button>
+      <button type="button" class="btn primary" id="setSave"${C.dirty ? '' : ' disabled'}>Сохранить настройки</button>
+    </div>
+    ${C.derived ? `<div class="msg info">Список собран из последнего плана месяца (${d.items.length} артикулов). Проверьте категории и нажмите «Сохранить настройки».</div>` : ''}
+    <p class="hint">Здесь задаётся, какие артикулы в каком кабинете на вашем ведении и к какой категории они относятся. Категории отсюда используются в плане и трекере всех месяцев.
+      Сменить категорию сразу у многих — отметьте их галочками (или всю категорию галочкой в её строке) и нажмите «Задать категорию». Переименовать категорию — поправьте название в её строке.</p>
+    <div class="bar">${chips}</div>
+    <div class="bar">
+      <input type="search" id="setQ" value="${esc(C.q)}" placeholder="Найти артикул или категорию" aria-label="Поиск" style="min-width:220px">
+      <div class="seg" role="group" aria-label="Показать">
+        ${[['', 'все'], ['on', 'на ведении'], ['off', 'не на ведении']].map(([k, l]) => `<button type="button" data-setst="${k}" class="${(C.status || '') === k ? 'on' : ''}">${l}</button>`).join('')}
+      </div>
+      <span class="spacer"></span>
+      <button type="button" class="btn" id="setAddOpen">Добавить артикул</button>
+      <label class="btn" for="setFile" style="display:inline-block">Загрузить из Excel</label><input type="file" id="setFile" accept=".xlsx" hidden>
+      <button type="button" class="btn" id="setOut">Выгрузить в Excel</button>
+    </div>
+    ${C.adding ? `<div class="card addbox"><div class="bar" style="margin:0">
+      <input id="addCab" list="dlcab" placeholder="Кабинет" value="${esc(C.cab || cabs[0] || '')}" aria-label="Кабинет">
+      <input id="addArt" placeholder="Артикул (можно несколько через запятую или с новой строки)" aria-label="Артикул" style="flex:2 1 260px">
+      <input id="addCat" list="dlall3" placeholder="Категория" aria-label="Категория"><datalist id="dlall3">${[...new Set(d.items.map(it => it.cat).filter(Boolean))].map(c => `<option value="${esc(c)}">`).join('')}</datalist>
+      <button type="button" class="btn primary" id="setAdd">Добавить</button><button type="button" class="btn" id="setAddClose">Закрыть</button></div></div>` : ''}
+    ${bulk}
+    ${lists}
+    ${vis.length ? `<div class="edbox"><table class="ed set"><thead><tr><th style="width:28px"></th><th>Артикул</th><th>Категория</th><th>Статус</th><th></th></tr></thead><tbody>${body}</tbody></table></div>`
+      : `<div class="empty card"><b>${d.items.length ? 'Ничего не найдено' : 'Список пуст'}</b>${d.items.length ? 'Измените фильтр или поиск.' : 'Добавьте артикулы вручную, из Excel или из загруженных отчётов.'}</div>`}
+    ${freshCard}
+    <div class="card" style="margin-top:12px">
+      <h2 style="margin-top:0">Данные и доступ</h2>
+      <div class="bar" style="margin:0">
+        <button type="button" class="btn" id="expJson">Экспорт всех данных</button>
+        <label class="btn" for="impJson" style="display:inline-block">Импорт данных</label><input type="file" id="impJson" accept=".json,application/json" hidden>
+        <button type="button" class="btn" id="ghSetup">${Backend.kind === 'github' ? 'Сменить ключ GitHub' : 'Подключить GitHub'}</button>
+      </div>
+      <p class="hint" style="margin:8px 0 0">Экспорт сохраняет все месяцы, факт и настройки одним JSON-файлом, импорт возвращает их обратно. ${Backend.kind === 'github' ? `Данные хранятся в репозитории <b>${esc(Backend.repo)}</b>, каждое сохранение — отдельная версия.` : ''}</p>
+    </div>`;
+  const nb = el.querySelector('.edbox'); if (nb) nb.scrollTop = keepTop;
+  window.scrollTo(0, keepY);
+}
+
+function setFocusKeep(sel, fn) {
+  const a = document.activeElement, keep = a && a.matches && a.matches(sel) ? {s: sel, p: a.selectionStart} : null;
+  fn();
+  if (keep) { const n = $(keep.s); if (n) { n.focus(); try { n.setSelectionRange(keep.p, keep.p); } catch (e) {} } }
+}
+
+async function readSettingsXlsx(file) {
+  const rows = await readXlsx(file);
+  let hi = -1;
+  for (let i = 0; i < Math.min(rows.length, 15); i++) if ((rows[i] || []).some(h => /артикул/i.test(String(h ?? '')))) { hi = i; break; }
+  if (hi < 0) throw new Error('нет строки заголовков с колонкой «Артикул»');
+  const head = (rows[hi] || []).map(h => String(h ?? '').trim().toLowerCase());
+  const col = {};
+  head.forEach((h, i) => {
+    if (col.art == null && /артикул/.test(h)) col.art = i;
+    else if (col.cab == null && /кабинет/.test(h)) col.cab = i;
+    else if (col.cat == null && /категор/.test(h)) col.cat = i;
+    else if (col.on == null && /ведени|мо[йи]|статус|актив/.test(h)) col.on = i;
+  });
+  if (col.cab == null) throw new Error('нужна колонка «Кабинет»');
+  const out = [];
+  let cab = '', cat = '';
+  rows.slice(hi + 1).forEach(r => {
+    r = r || [];
+    const v = c => col[c] != null && has(r[col[c]]) ? String(r[col[c]]).trim() : '';
+    if (v('cab')) cab = v('cab');
+    if (v('cat')) cat = v('cat');
+    const art = v('art');
+    if (!art || !cab) return;
+    const onRaw = v('on').toLowerCase();
+    out.push({cab, art, cat: col.cat != null ? cat : null, on: col.on == null || !onRaw ? null : !/^(нет|no|0|false|ложь|-|не)/.test(onRaw)});
+  });
+  if (!out.length) throw new Error('в файле нет строк с артикулами');
+  return out;
+}
+
+async function saveCatalogDraft() {
+  const d = clone(catDraft());
+  d.items = d.items.filter(it => it.art && it.cab);
+  d.items.forEach(it => { it.cat = String(it.cat || '').trim() || 'Без категории'; });
+  d.cabinets = catCabs(d);
+  d.updatedAt = new Date().toISOString();
+  try {
+    await Backend.saveCatalog(d);
+    S.catalog = d; S.cat.draft = null; S.cat.dirty = false; S.cat.derived = false;
+    if (!S.dirty) S.draft = null; // план месяца перестроится по новым категориям
+    S.cat.msg = {t: 'ok', html: 'Настройки сохранены. План и трекер пересчитаны по новым категориям.'};
+    pushHistory();
+  } catch (e) {
+    S.cat.msg = {t: 'err', html: 'Не сохранилось: ' + esc(e.message)};
+  }
+  renderAll();
+}
+
+function settingsClick(b) {
+  const C = S.cat, d = catDraft();
+  if (b.dataset.setcab != null) { C.cab = b.dataset.setcab; pref.set('setCab', C.cab); C.sel = new Set(); renderSettings(); return true; }
+  if (b.dataset.setst != null) { C.status = b.dataset.setst; renderSettings(); return true; }
+  if (b.dataset.rm != null) { d.items.splice(+b.dataset.rm, 1); C.sel = new Set(); catSetDirty(); renderSettings(); return true; }
+  switch (b.id) {
+    case 'setSave': b.disabled = true; b.textContent = 'Сохраняю…'; saveCatalogDraft(); return true;
+    case 'setUndo': C.draft = null; C.dirty = false; C.msg = null; renderSettings(); return true;
+    case 'setAddOpen': C.adding = true; renderSettings(); const a = $('#addArt'); if (a) a.focus(); return true;
+    case 'setAddClose': C.adding = false; renderSettings(); return true;
+    case 'setAdd': {
+      const cab = $('#addCab').value.trim(), cat = $('#addCat').value.trim();
+      const arts = $('#addArt').value.split(/[\n,;]+/).map(x => x.trim()).filter(Boolean);
+      if (!cab || !arts.length) { C.msg = {t: 'err', html: 'Укажите кабинет и артикул.'}; renderSettings(); return true; }
+      let n = 0;
+      arts.forEach(art => {
+        const it = d.items.find(x => x.cab === cab && x.art === art);
+        if (it) { if (cat) it.cat = cat; it.on = true; } else { d.items.push({cab, art, cat: cat || 'Без категории', on: true}); n++; }
+      });
+      if (!d.cabinets.includes(cab)) d.cabinets.push(cab);
+      C.msg = {t: 'ok', html: `Добавлено: ${n}${arts.length > n ? `, обновлено: ${arts.length - n}` : ''}. Не забудьте сохранить.`};
+      catSetDirty(); renderSettings(); return true;
+    }
+    case 'bulkSetCat': {
+      const cat = ($('#bulkCat').value || '').trim();
+      if (!cat) { const i = $('#bulkCat'); if (i) i.focus(); return true; }
+      C.sel.forEach(i => { if (d.items[i]) d.items[i].cat = cat; });
+      C.msg = {t: 'ok', html: `Категория «${esc(cat)}» задана для ${C.sel.size} арт. Не забудьте сохранить.`};
+      C.sel = new Set(); catSetDirty(); renderSettings(); return true;
+    }
+    case 'bulkOn': case 'bulkOff': C.sel.forEach(i => { if (d.items[i]) d.items[i].on = b.id === 'bulkOn'; }); C.sel = new Set(); catSetDirty(); renderSettings(); return true;
+    case 'bulkRm': d.items = d.items.filter((_, i) => !C.sel.has(i)); C.sel = new Set(); catSetDirty(); renderSettings(); return true;
+    case 'bulkClear': C.sel = new Set(); renderSettings(); return true;
+    case 'frAll': document.querySelectorAll('input[data-fr]').forEach(x => { x.checked = true; }); return true;
+    case 'frAdd': case 'frOff': {
+      const arts = [...document.querySelectorAll('input[data-fr]:checked')].map(x => x.dataset.fr);
+      const cab = $('#frCab') ? $('#frCab').value : '';
+      if (!arts.length || !cab) { C.msg = {t: 'err', html: 'Отметьте артикулы и выберите кабинет.'}; renderSettings(); return true; }
+      const cat = ($('#frCat').value || '').trim() || (b.id === 'frOff' ? 'Не мои' : 'Без категории');
+      arts.forEach(art => d.items.push({cab, art, cat, on: b.id === 'frAdd'}));
+      C.msg = {t: 'ok', html: `${b.id === 'frAdd' ? 'Добавлено в мои' : 'Отмечено как не мои'}: ${arts.length}. Не забудьте сохранить.`};
+      catSetDirty(); renderSettings(); return true;
+    }
+    case 'setOut': {
+      const cabs = catCabs(d);
+      const rows = d.items.slice().sort((a, b) => cabs.indexOf(a.cab) - cabs.indexOf(b.cab)).map(it => [it.cab, it.cat, it.art, it.on === false ? 'нет' : 'да']);
+      downloadXlsx('my-articles.xlsx', 'Мои артикулы', SET_COLS, rows, [14, 28, 32, 12], [0, 0, 0, 0]).catch(e => { C.msg = {t: 'err', html: 'Не выгрузилось: ' + esc(e.message)}; renderSettings(); });
+      return true;
+    }
+  }
+  return false;
+}
+
+function settingsChange(t) {
+  const C = S.cat, d = catDraft();
+  if (t.dataset.sel != null) { const i = +t.dataset.sel; t.checked ? C.sel.add(i) : C.sel.delete(i); updateBulk(); return true; }
+  if (t.dataset.selg != null) {
+    // только видимые сейчас артикулы категории (с учётом фильтра и поиска)
+    document.querySelectorAll('input[data-sel]').forEach(x => {
+      if (x.dataset.g !== t.dataset.selg) return;
+      x.checked = t.checked; t.checked ? C.sel.add(+x.dataset.sel) : C.sel.delete(+x.dataset.sel);
+    });
+    updateBulk(); return true;
+  }
+  if (t.dataset.it != null) {
+    const [i, f] = t.dataset.it.split('.');
+    const it = d.items[+i]; if (!it) return true;
+    if (f === 'on') { it.on = t.checked; const tr = t.closest('tr'); if (tr) tr.classList.toggle('offrow', !t.checked); catSetDirty(); return true; }
+    it.cat = t.value.trim();
+    catSetDirty(); renderSettings(); return true;
+  }
+  if (t.dataset.rencat != null) {
+    const [cab, ...rest] = t.dataset.rencat.split('|'), old = rest.join('|'), nv = t.value.trim();
+    if (!nv) { renderSettings(); return true; }
+    d.items.forEach(it => { if (it.cab === cab && it.cat === old) it.cat = nv; });
+    catSetDirty(); renderSettings(); return true;
+  }
+  if (t.id === 'setFile') {
+    const file = t.files[0]; t.value = '';
+    if (!file) return true;
+    readSettingsXlsx(file).then(rows => {
+      let up = 0, add = 0;
+      rows.forEach(r => {
+        const it = d.items.find(x => x.cab === r.cab && x.art === r.art);
+        if (it) { if (r.cat) it.cat = r.cat; if (r.on != null) it.on = r.on; up++; }
+        else { d.items.push({cab: r.cab, art: r.art, cat: r.cat || 'Без категории', on: r.on == null ? true : r.on}); add++; }
+        if (!d.cabinets.includes(r.cab)) d.cabinets.push(r.cab);
+      });
+      C.msg = {t: 'ok', html: `Из файла «${esc(file.name)}»: обновлено ${up}, добавлено ${add}. Артикулы, которых нет в файле, не тронуты. Проверьте и сохраните.`};
+      catSetDirty(); renderSettings();
+    }).catch(e => { C.msg = {t: 'err', html: 'Файл не прочитан: ' + esc(e.message)}; renderSettings(); });
+    return true;
+  }
+  return false;
 }
 
 /* ============ ЗАГРУЗКА ДАННЫХ ============ */
@@ -1455,7 +1929,7 @@ async function saveUpload() {
 
 /* ============ экспорт / импорт ============ */
 function exportJson() {
-  const data = {app: 'ozon-plan', version: 1, exportedAt: new Date().toISOString(), months: S.months, facts: S.facts};
+  const data = {app: 'ozon-plan', version: 1, exportedAt: new Date().toISOString(), months: S.months, facts: S.facts, catalog: S.catalog || undefined};
   const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1467,18 +1941,19 @@ function exportJson() {
 async function importJson(file) {
   try {
     const data = JSON.parse(await file.text());
-    if (!data || typeof data !== 'object' || (!data.months && !data.facts)) throw new Error('в файле нет месяцев и факта');
-    S.planMsg = {t: 'info', html: 'Импортирую…'}; renderPlan();
+    if (!data || typeof data !== 'object' || (!data.months && !data.facts && !data.catalog)) throw new Error('в файле нет месяцев, факта и настроек');
+    S.cat.msg = {t: 'info', html: 'Импортирую…'}; renderSettings();
     await Backend.importAll(data);
     Object.assign(S.months, data.months || {});
     Object.assign(S.facts, data.facts || {});
+    if (data.catalog) { S.catalog = data.catalog; S.cat.draft = null; S.cat.dirty = false; }
     const ids = Object.keys(data.months || {}).sort();
     if (ids.length) S.mid = ids[ids.length - 1];
     S.dirty = false; S.draft = null;
-    S.planMsg = {t: 'ok', html: `Импортировано: месяцев ${Object.keys(data.months || {}).length}, периодов факта ${Object.keys(data.facts || {}).length}.`};
+    S.cat.msg = {t: 'ok', html: `Импортировано: месяцев ${Object.keys(data.months || {}).length}, периодов факта ${Object.keys(data.facts || {}).length}${data.catalog ? ', настройки артикулов' : ''}.`};
     pushHistory();
   } catch (e) {
-    S.planMsg = {t: 'err', html: 'Не удалось импортировать: ' + esc(e.message)};
+    S.cat.msg = {t: 'err', html: 'Не удалось импортировать: ' + esc(e.message)};
   }
   renderAll();
 }
@@ -1488,7 +1963,8 @@ document.addEventListener('click', async e => {
   const b = e.target.closest('button, tr[data-cat]');
   if (!b) return;
   if (!S.loaded && !b.matches('#tabs button, #modeSeg button')) return;
-  if (b.matches('#tabs button')) { S.tab = b.dataset.tab; pref.set('tab', S.tab); S.planMsg = null; S.up.msg = null; S.up.confirmDel = null; renderAll(); return; }
+  if (b.matches('#tabs button')) { S.tab = b.dataset.tab; pref.set('tab', S.tab); S.planMsg = null; S.up.msg = null; S.up.confirmDel = null; S.cat.msg = null; renderAll(); return; }
+  if (S.tab === 'settings' && settingsClick(b)) return;
   if (b.matches('#modeSeg button')) { S.mode = b.dataset.mode; pref.set('mode', S.mode); S.sim.sc = null; renderAll(); return; }
   if (b.dataset.scope) { S.scope = b.dataset.scope; renderTracker(); return; }
   if (b.matches('tr[data-cat]')) { const k = b.dataset.cat; S.open.has(k) ? S.open.delete(k) : S.open.add(k); pref.set('open', [...S.open]); renderTracker(); return; }
@@ -1510,8 +1986,11 @@ document.addEventListener('click', async e => {
     const mid = S.pl.month;
     if (!/^\d{4}-\d{2}$/.test(mid)) { S.planMsg = {t: 'err', html: 'Выберите месяц.'}; renderPlan(); return; }
     b.disabled = true; b.textContent = 'Сохраняю…';
+    let added = 0;
+    try { added = await addToCatalog(S.pl.parsed.fresh || []); }
+    catch (err) { S.planMsg = {t: 'err', html: 'Не сохранились настройки: ' + esc(err.message)}; renderPlan(); return; }
     const doc = buildPlanDoc(S.pl.parsed, mid);
-    if (await saveMonthDoc(mid, doc, `План ${monthLabel(mid).toLowerCase()} сохранён: ${doc.plan.length} артикулов.`)) {
+    if (await saveMonthDoc(mid, doc, `План ${monthLabel(mid).toLowerCase()} сохранён: ${S.pl.parsed.rows.length} артикулов из файла.` + (added ? ` В настройки добавлено новых артикулов: ${added}.` : ''))) {
       S.mid = mid; pref.set('mid', mid); S.dirty = false; S.draft = null; S.pl = {month: mid};
     }
     renderAll(); return;
@@ -1525,8 +2004,18 @@ document.addEventListener('click', async e => {
     if (await saveMonthDoc(id, doc, `${monthLabel(id)} создан.`)) { S.mid = id; pref.set('mid', id); S.dirty = false; S.draft = null; }
     renderAll(); return;
   }
+  if (b.id === 'mkEmpty') {
+    const id = $('#newMonth').value;
+    if (!/^\d{4}-\d{2}$/.test(id)) { S.planMsg = {t: 'err', html: 'Выберите месяц.'}; renderPlan(); return; }
+    if (S.months[id]) { S.planMsg = {t: 'err', html: `${monthLabel(id)} уже есть. Выберите его в списке месяцев сверху.`}; renderPlan(); return; }
+    const src = S.mid && S.months[S.mid] ? S.months[S.mid] : {};
+    const doc = syncDraft({cabinets: [], categories: (src.categories || []).map(c => ({cab: c.cab, cat: c.cat, min: c.min ?? null, norm: c.norm ?? null, st: c.st ?? null})), plan: []});
+    if (!doc.plan.length) { S.planMsg = {t: 'err', html: 'В «Настройках» нет ни одного артикула на ведении — сначала добавьте их там.'}; renderPlan(); return; }
+    if (await saveMonthDoc(id, doc, `${monthLabel(id)} создан: ${doc.plan.length} артикулов, впишите цену и план в штуках.`)) { S.mid = id; pref.set('mid', id); S.dirty = false; S.draft = null; }
+    renderAll(); return;
+  }
   if (b.id === 'expJson') { exportJson(); return; }
-  if (b.id === 'ghSetup') { if (S.dirty && !confirm('Есть несохранённые правки плана. Перейти к ключу?')) return; showSetup(); return; }
+  if (b.id === 'ghSetup') { if ((S.dirty || S.cat.dirty) && !confirm('Есть несохранённые правки. Перейти к ключу?')) return; showSetup(); return; }
   if (b.id === 'upSave') { saveUpload(); return; }
   if (b.id === 'upClear') { S.up.parsed = {}; S.up.msg = null; renderUpload(); return; }
   if (b.dataset.del) {
@@ -1542,6 +2031,7 @@ document.addEventListener('click', async e => {
 
 document.addEventListener('change', e => {
   const t = e.target;
+  if (S.tab === 'settings' && S.loaded && settingsChange(t)) return;
   if (t.id === 'monthSel') { S.mid = t.value; pref.set('mid', S.mid); S.scope = 'month'; S.sim.sc = null; S.up.parsed = {}; if (!S.pl || !S.pl.parsed) S.pl = {month: S.mid}; renderAll(); return; }
   if (t.id === 'simSel') { S.sim.key = t.value; S.sim.sc = null; renderSim(); return; }
   if (t.id === 'upPeriod') { S.up.period = t.value; renderUpload(); return; }
@@ -1553,6 +2043,7 @@ document.addEventListener('change', e => {
 
 document.addEventListener('input', e => {
   const t = e.target;
+  if (t.id === 'setQ') { S.cat.q = t.value; setFocusKeep('#setQ', renderSettings); return; }
   if (t.id === 'q') { S.q = t.value; const pos = t.selectionStart; renderTracker(); const n = $('#q'); n.focus(); n.setSelectionRange(pos, pos); return; }
   if (t.dataset.f && t.dataset.i != null && S.sim.sc) {
     const s = S.sim.sc[+t.dataset.i];
@@ -1570,13 +2061,19 @@ document.addEventListener('input', e => {
     const raw = t.value.trim();
     let v = raw === '' ? null : num(raw);
     if (v != null && t.dataset.pct) v = v / 100;
-    arr[+idx][field] = v;
-    if (kind === 'p') {
-      const r = S.draft.plan[+idx];
-      const c = (S.draft.categories || []).find(x => x.cab === r.cab && x.cat === r.cat) || {};
-      const norm = r.norm != null && r.norm !== '' ? num(r.norm) : num(c.norm);
-      const cell = $('#chp' + idx); if (cell) cell.textContent = R(num(r.qty) * num(r.buy) * num(r.cost) * norm);
+    const row = arr[+idx];
+    row[field] = v;
+    if (kind === 'p' && field === 'buy') delete row.buyGuess;
+    if (kind === 'c' && ['min', 'norm', 'st'].includes(field)) {
+      // ROI категории действует на все её артикулы: свои значения у артикулов сбрасываются
+      S.draft.plan.forEach((r, j) => {
+        if (r.cab !== row.cab || r.cat !== row.cat) return;
+        r[field] = null;
+        const inp = document.querySelector(`input[data-k="p.${j}.${field}"]`);
+        if (inp) { inp.value = ''; inp.placeholder = pctIn(v); }
+      });
     }
+    planCalc();
     planSetDirty();
   }
 });
@@ -1585,10 +2082,10 @@ const dropOn = on => e => { const d = e.target.closest && e.target.closest('#dro
 document.addEventListener('dragover', dropOn(true));
 document.addEventListener('dragleave', dropOn(false));
 document.addEventListener('drop', e => { const d = e.target.closest && e.target.closest('#drop'); if (!d) return; e.preventDefault(); d.classList.remove('over'); handleFiles(e.dataTransfer.files); });
-window.addEventListener('beforeunload', e => { if (S.dirty) { e.preventDefault(); e.returnValue = ''; } });
+window.addEventListener('beforeunload', e => { if (S.dirty || S.cat.dirty) { e.preventDefault(); e.returnValue = ''; } });
 
 /* ============ старт ============ */
-function hideTabs() { ['tracker', 'sim', 'history', 'plan', 'upload'].forEach(t => { $('#tab-' + t).hidden = true; }); }
+function hideTabs() { ['tracker', 'sim', 'history', 'plan', 'upload', 'settings'].forEach(t => { $('#tab-' + t).hidden = true; }); }
 
 function showLoadProblem(text, withSetup) {
   hideTabs();
@@ -1648,7 +2145,7 @@ async function start() {
     }
     stage = 'Загружаю данные';
     const data = await withTimeout(Backend.load((d, n) => { stage = `Загружаю данные: ${d} из ${n} файлов`; }), 90000);
-    S.months = data.months || {}; S.facts = data.facts || {};
+    S.months = data.months || {}; S.facts = data.facts || {}; S.catalog = data.catalog || null;
     S.loaded = true;
   } catch (e) {
     clearInterval(tick);

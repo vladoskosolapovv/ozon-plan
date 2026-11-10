@@ -541,7 +541,7 @@ const S = {
   cat: {draft: null, dirty: false, msg: null, cab: pref.get('setCab', ''), q: '', sel: new Set(), onlyOn: false, parsed: null}
 };
 
-/* ============ периоды месяца: первая неделя до воскресенья, дальше пн–вс ============ */
+/* ============ периоды месяца: первая неделя до воскресенья (если месяц начался с воскресенья, 1-е прицеплено ко второй неделе), дальше пн–вс ============ */
 function periods(mid) {
   const [y, m] = mid.split('-').map(Number);
   const days = new Date(y, m, 0).getDate();
@@ -550,6 +550,8 @@ function periods(mid) {
   while (s <= days) {
     let e = s;
     while (e < days && new Date(y, m - 1, e).getDay() !== 0) e++;
+    // месяц начался с воскресенья: 1-е число не отдельная неделя, а прицепляется ко второй (01–08)
+    if (s === 1 && e === 1 && days > 1) { e = 2; while (e < days && new Date(y, m - 1, e).getDay() !== 0) e++; }
     list.push({id: pad(s) + '-' + pad(e), from: s, to: e, days: e - s + 1, label: pad(s) + '.' + pad(m) + '–' + pad(e) + '.' + pad(m)});
     s = e + 1;
   }

@@ -211,7 +211,7 @@ table.ed tr.cpart input:disabled{background:var(--surface-2);color:var(--muted);
 .tag-new{font-size:11px;color:var(--warn);background:var(--warn-bg);border-radius:5px;padding:1px 6px;margin-left:4px}
 table.ed td{padding:3px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
 table.ed input{width:100%;text-align:right;padding:4px 6px}
-table.ed input.w{width:110px} table.ed input.s{width:72px}
+table.ed input.w{width:110px} table.ed input.s{width:72px} table.ed input.pnl{background:transparent;border-color:transparent;color:var(--muted,#6b7280);cursor:default}
 table.ed tr.grp td{background:var(--surface-2);font-weight:600;padding:7px 8px}
 .edbox{max-height:62vh;overflow:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
 textarea{width:100%;min-height:120px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px}
@@ -657,7 +657,7 @@ function model(mid, mode) {
   const effRub = r => isCatPlan(r) ? 0 : num(r.rub);
   const tot = {}, cnt = {};
   planRows.forEach(r => { tot[r.art] = (tot[r.art] || 0) + effRub(r); cnt[r.art] = (cnt[r.art] || 0) + 1; });
-  // себестоимость из отчётов — для артикулов, где в плане она не задана (сначала этот месяц, потом последние отчёты)
+  // себестоимость берётся из P&L (последний отчёт: себестоимость ÷ продано); ручная — только там, где в P&L артикула нет
   const fu = {cost: {}};
   Object.keys(S.facts).sort((a, b) => (a.startsWith(mid) ? 1 : 0) - (b.startsWith(mid) ? 1 : 0) || a.localeCompare(b)).forEach(id => {
     const f = S.facts[id];
@@ -674,7 +674,7 @@ function model(mid, mode) {
     const cp = isCatPlan(r);
     const n = {type: 'art', key: r.cab + '|' + r.cat + '|' + r.art, cab: r.cab, cat: r.cat, art: r.art, c, share, catPlan: cp,
       planRub: cp ? 0 : num(r.rub), planQty: cp ? 0 : num(r.qty), planPrice: num(r.price),
-      planCost: hasV(r.cost) ? num(r.cost) : (fu.cost[r.art] || 0),
+      pnl: !!fu.cost[r.art], planCost: fu.cost[r.art] || (hasV(r.cost) ? num(r.cost) : 0),
       planBuy: r.buyManual && hasV(r.buy) ? num(r.buy) : catBuyOf(cc, AU[r.cab + '|' + r.cat]), f: {}};
     n.planChp = n.planQty * n.planBuy * n.planCost * num(c.norm);
     scopes.forEach(s => { n.f[s] = Z(); });
@@ -1256,7 +1256,7 @@ function parsePlan(rows) {
   return {rows: out, cats, warn, fresh};
 }
 
-/* себестоимость и выкуп: из этого месяца, из других месяцев, из последних отчётов */
+/* себестоимость: P&L главнее, потом ручная из планов; выкуп: из планов, потом из отчётов */
 function costBuyLookup(targetMid) {
   const byCabArt = {}, byArt = {};
   const mids = Object.keys(S.months).sort().reverse();
@@ -1275,9 +1275,9 @@ function costBuyLookup(targetMid) {
   });
   return (cab, art) => {
     const a = byCabArt[cab + '|' + art] || {}, b = byArt[art] || {}, c = fact[art] || {};
-    const cost = a.cost != null ? a.cost : b.cost != null ? b.cost : c.cost != null ? Math.round(c.cost * 100) / 100 : null;
+    const cost = c.cost != null ? Math.round(c.cost * 100) / 100 : a.cost != null ? a.cost : b.cost != null ? b.cost : null;
     const buy = a.buy != null ? a.buy : b.buy != null ? b.buy : c.buy != null ? Math.round(c.buy * 10000) / 10000 : null;
-    return {cost, buy};
+    return {cost, buy, fromPnl: c.cost != null};
   };
 }
 
@@ -1286,7 +1286,7 @@ function buildPlanDoc(parsed, mid) {
   const look = costBuyLookup(mid);
   const plan = parsed.rows.map(x => {
     const r = {cab: x.cab, cat: x.cat, art: x.art, price: x.price, qty: x.qty, rub: x.rub, min: x.min, norm: x.norm, st: x.st,
-      cost: x.cost != null ? x.cost : look(x.cab, x.art).cost};
+      cost: look(x.cab, x.art).cost != null && look(x.cab, x.art).fromPnl ? null : x.cost != null ? x.cost : look(x.cab, x.art).cost};
     if (x.buy != null) { r.buy = x.buy; r.buyManual = true; }
     return r;
   });
@@ -1357,7 +1357,7 @@ async function exportPlanXlsx(mid) {
     const cp = catTarget(c) > 0, buy = catBuyOf(c, au), cs = catCsOf(c, au), norm = num(c.norm);
     const arts = g.rows.map((r, j) => {
       const n = a + j, f = fb[r.cab + '|' + r.art] || {};
-      const cost = has(r.cost) ? num(r.cost) : Math.round(f.planCost || 0) || '';
+      const cost = f.pnl ? Math.round(f.planCost) : has(r.cost) ? num(r.cost) : '';
       const rn = has(r.norm) ? num(r.norm) : norm, rb = r.buyManual && has(r.buy) ? num(r.buy) : buy;
       const rub = has(r.price) && num(r.price) > 0 ? Math.round(num(r.price) * num(r.qty)) : num(r.rub);
       const chp = num(r.qty) * rb * num(cost) * rn;
@@ -1542,7 +1542,7 @@ function renderPlan() {
       <td>${pIn('p.' + i + '.min', r.min, 'Пороговая ROI ' + r.art, pctIn(c.min))}</td>
       <td>${pIn('p.' + i + '.norm', r.norm, 'Норм ROI ' + r.art, pctIn(c.norm))}</td>
       <td>${pIn('p.' + i + '.st', r.st, 'Сверх ROI ' + r.art, pctIn(c.st))}</td>
-      <td><input class="w" data-k="p.${i}.cost" value="${has(r.cost) ? r.cost : ''}" placeholder="${!has(r.cost) && f.planCost ? Math.round(f.planCost) : ''}" title="${!has(r.cost) && f.planCost ? 'Из отчёта: ' + Math.round(f.planCost) + ' ₽' : ''}" aria-label="Себестоимость ${esc(r.art)}"${has(r.cost) || f.planCost ? '' : ' style="background:var(--warn-bg)"'} inputmode="decimal"></td>
+      <td>${f.pnl ? `<input class="w pnl" value="${Math.round(f.planCost)}" readonly tabindex="-1" title="Из P&L: себестоимость ÷ продано в последнем отчёте. Меняется сама при загрузке нового P&L." aria-label="Себестоимость ${esc(r.art)} из P&L">` : `<input class="w" data-k="p.${i}.cost" value="${has(r.cost) ? r.cost : ''}" placeholder="нет в P&L" title="Артикула нет в P&L: впишите себестоимость вручную. Когда он появится в отчёте, сайт возьмёт себестоимость оттуда." aria-label="Себестоимость ${esc(r.art)}"${has(r.cost) ? '' : ' style="background:var(--warn-bg)"'} inputmode="decimal">`}</td>
       <td>${pIn('p.' + i + '.buy', r.buyManual ? r.buy : null, 'Выкуп ' + r.art, '', ' title="Пусто — выкуп категории"')}</td>
       <td class="n calc" id="chp${i}"></td><td class="n calc stc" id="chs${i}"></td></tr>`;
   });
@@ -1577,7 +1577,7 @@ function planCalc() {
     const cp = catTarget(c) > 0, cbuy = catBuyOf(c, AU[k]);
     if (has(r.price) && num(r.price) > 0) r.rub = Math.round(num(r.price) * num(r.qty));
     const norm = has(r.norm) ? num(r.norm) : num(c.norm);
-    const cost = has(r.cost) ? num(r.cost) : (f.planCost || 0);
+    const cost = f.pnl ? f.planCost : has(r.cost) ? num(r.cost) : 0;
     const buy = r.buyManual && has(r.buy) ? num(r.buy) : cbuy;
     const base = cp ? 0 : num(r.qty) * buy * cost, chp = base * norm;
     const chs = base * (has(r.st) ? num(r.st) : has(c.st) ? num(c.st) : norm); // нет сверх — как по норме
